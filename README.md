@@ -1,25 +1,28 @@
-# obsidian-react-starter
+# Obsidian Big Calendar
 
-A starter template for creating an [Obsidian](https://obsidian.md/) plugin with [ReactJS](https://reactjs.org/).
+A Calendar plugin to show more information like google calendar.
 
 ## Features
 
-This project comes preconfigured with [Typescript](https://www.typescriptlang.org/), [Babel](https://babeljs.io/), and [Rollup.js](https://www.rollupjs.org).
+### All features in React Big Calendar
 
-## Getting Started
+- Month View (v1)
+- Week View  (v1)
+- Day View (v1)
+- Agenda View  (v1)
 
-Click "use this template" to create your own fork of this repo. Make sure to reference [the official sample plugin](https://github.com/obsidianmd/obsidian-sample-plugin) for information about how to get started with the Obsidian API and how to submit your plugin to the Community Plugin Gallery.
+and so on.. You could find details in [React Big Calendar](https://github.com/jquense/react-big-calendar)
 
-```bash
-# for local development
-npm install
-npm run dev
+### Work with Obsidian
 
-# for a production bundle
-npm install
-npm run build
-```
+- Show tasks marked with time and day  (v1)
+- Show blocks marked with time in daily note  (v1)
+- Click tasks/blocks to jump to the original note (v1)
 
-## Stats
+## Usage
 
-The production output of this sample plugin is **~200 KB**.
+On the way.
+
+## Install
+
+On the way.
