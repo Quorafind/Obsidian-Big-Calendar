@@ -6,10 +6,10 @@ A Calendar plugin to show more information like google calendar.
 
 ### All features in React Big Calendar
 
-- Month View (v1)
-- Week View  (v1)
-- Day View (v1)
-- Agenda View  (v1)
+- [x] Month View (v1)
+- [x] Week View  (v1)
+- [x] Day View (v1)
+- [x] Agenda View  (v1)
 
 and so on.. You could find details in [React Big Calendar](https://github.com/jquense/react-big-calendar)
 
@@ -19,9 +19,18 @@ and so on.. You could find details in [React Big Calendar](https://github.com/jq
 - Show blocks marked with time in daily note  (v1)
 - Click tasks/blocks to jump to the original note (v1)
 
+## Problems NOW
+
+- Cannot parse when there are excalidraw or folder note md files in Daily Note Folder.
+- Should restart again to make the calendar parse.
+
 ## Usage
 
-On the way.
+Allow:
+
+- `- [ ]` in daily note.
+- `- 19:00` in daily note.
+- `- [ ] 19:00` in daily note.
 
 ## Install
 
