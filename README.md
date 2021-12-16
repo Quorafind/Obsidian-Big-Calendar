@@ -21,8 +21,8 @@ and so on.. You could find details in [React Big Calendar](https://github.com/jq
 
 ## Problems NOW
 
-- Cannot parse when there are excalidraw or folder note md files in Daily Note Folder.
-- Should restart again to make the calendar parse.
+- [ ] Cannot parse notes when there are excalidraw or folder note md files in Daily Note Folder.
+- [ ] Should restart again to make the calendar parse.
 
 ## Usage
 
@@ -34,4 +34,21 @@ Allow:
 
 ## Install
 
-On the way.
+### Plugin Market
+
+Not yet
+
+### BRAT
+
+Add `Quorafind/Obsidian-Big-Calendar` to BRAT.
+
+### Manual Install
+
+Download the latest release. Extract and put the three files (main.js, manifest.json, styles.css) to folder `{{obsidian_vault}}/.obsidian/plugins/Obsidian-Big-Calendar`.
+
+# Say Thank You
+
+If you are enjoying Excalidraw then please support my work and enthusiasm by buying me a coffee on [https://www.buymeacoffee.com/boninall](https://www.buymeacoffee.com/boninall).
+
+[<img style="float:left" src="https://s2.loli.net/2021/12/16/wJceg2MpithUHqN.png" width="200">](https://www.buymeacoffee.com/boninall)
+
