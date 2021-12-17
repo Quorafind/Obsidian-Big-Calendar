@@ -39,12 +39,10 @@ export function reactPreview() {
 }
 
 function successCallback(result) {
-  console.log("音频文件创建成功: " + result);
 }
 
 // 失败的回调函数
 function failureCallback(error) {
-  console.log("音频文件创建失败: " + error);
 }
 
 function sleep (time) {
@@ -77,16 +75,13 @@ class Dnd extends React.Component<any,any> {
     if(!events.length){
       const dailyEvents = outputResults();
       const promise2 = dailyEvents.then(successCallback, failureCallback);
-      console.log(promise2);
       sleep(200).then(async () => {
         if(dailyEvents != this.state.events){
           this.setState({
             events: [...await dailyEvents]
           },  
           ()=>{
-          console.log(this.state)
           })
-          console.log(this.state)
         }
         this.forceUpdate
       })

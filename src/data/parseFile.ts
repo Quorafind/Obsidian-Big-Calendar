@@ -62,7 +62,6 @@ export async function getTasksForDailyNote(
 export function clear(clearbool: boolean) {
   if(clearbool) {
     dailyEvents.splice(0, events.length);
-    console.log("run");
   }
 }
 
