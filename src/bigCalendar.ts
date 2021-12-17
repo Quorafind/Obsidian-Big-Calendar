@@ -35,5 +35,9 @@ export class BigCalendar extends ItemView {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		ReactDOM.render(this.reactComponent, (this as any).contentEl);
 	}
+
+	async onClose() {
+		// Nothing to clean up.
+	}
   
 }

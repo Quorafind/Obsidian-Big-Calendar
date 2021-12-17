@@ -21,8 +21,9 @@ and so on.. You could find details in [React Big Calendar](https://github.com/jq
 
 ## Problems NOW
 
-- [ ] Cannot parse notes when there are excalidraw or folder note md files in Daily Note Folder.
-- [ ] Should restart again to make the calendar parse.
+- [x] Cannot parse when there are excalidraw or folder note md files in Daily Note Folder.
+- [x] Should restart again to make the calendar parse.
+- [x] Adding tasks and Should restart it to parse.
 
 ## Usage
 

@@ -2,7 +2,7 @@ import { normalizePath, TFolder, Vault,TFile } from "obsidian";
 import { getAllDailyNotes,getDailyNoteSettings,getDateFromFile, getDailyNote } from "obsidian-daily-notes-interface";
 
 export class DailyNotesFolderMissingError extends Error {}
-export const  events = [];
+
 
 export async function getRemainingTasks(note: TFile): Promise<number> {
   if (!note) {
@@ -47,7 +47,7 @@ export async function getTasksForDailyNote(
           endDate.minutes(0);
           endDate.hours(0);
         }
-        events.push({
+        dailyEvents.push({
           id: i,
           title: rawText,
           start: startDate.toDate(),
@@ -59,7 +59,14 @@ export async function getTasksForDailyNote(
   }
 }
 
-export async function outputResults() {
+export function clear(clearbool: boolean) {
+  if(clearbool) {
+    dailyEvents.splice(0, events.length);
+    console.log("run");
+  }
+}
+
+export async function outputResults(): Promise<any[]> {
 
   const { vault } = window.app;
   const { folder } = getDailyNoteSettings();
@@ -73,19 +80,18 @@ export async function outputResults() {
   }
 
   const dailyNotes = getAllDailyNotes();
-  Vault.recurseChildren(dailyNotesFolder, (note) => {
-    try{
+  Vault.recurseChildren(dailyNotesFolder, async (note) => {
       if (note instanceof TFile && note.extension === 'md') {
         const date = getDateFromFile(note, "day");
-        const file = getDailyNote(date, dailyNotes);
-        if(file) {
-          getTasksForDailyNote(file);
+        if(date) {
+          const file = getDailyNote(date, dailyNotes);
+          await getTasksForDailyNote(file);
         }
       }
-    }catch(error){
-      console.error(error)
-    };
   });
+
+  events = dailyEvents;
+  return events;
 }
 
 
@@ -104,3 +110,5 @@ const extractTextFromTodoLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|
 const extractHourFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[4]
 //eslint-disable-next-line
 const extractMinFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[5]
+const dailyEvents = [];
+export let events = [];
