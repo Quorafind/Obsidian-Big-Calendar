@@ -47,13 +47,55 @@ export async function getTasksForDailyNote(
           endDate.minutes(0);
           endDate.hours(0);
         }
-        dailyEvents.push({
-          id: i,
-          title: rawText,
-          start: startDate.toDate(),
-          end: endDate.toDate(),
-          resourceId: i,
-        });
+        if(lineIsValidTodoEvent(line)){
+          dailyEvents.push({
+            id: i,
+            title: rawText,
+            start: startDate.toDate(),
+            end: endDate.toDate(),
+            resourceId: i,
+            status: 'TODO',
+            file: dailyNote,
+            originalText: line,
+            lineNum: i,
+          });
+        }else if(lineIsValidDoneEvent(line)){
+          dailyEvents.push({
+            id: i,
+            title: rawText,
+            start: startDate.toDate(),
+            end: endDate.toDate(),
+            resourceId: i,
+            status: 'DONE',
+            file: dailyNote,
+            originalText: line,
+            lineNum: i,
+          });
+        }else if(lineIsValidAnotherEvent(line)){
+          dailyEvents.push({
+            id: i,
+            title: rawText,
+            start: startDate.toDate(),
+            end: endDate.toDate(),
+            resourceId: i,
+            status: 'ANOTHER',
+            file: dailyNote,
+            originalText: line,
+            lineNum: i,
+          });
+        }else if(lineContainsTime(line)){
+          dailyEvents.push({
+            id: i,
+            title: rawText,
+            start: startDate.toDate(),
+            end: endDate.toDate(),
+            resourceId: i,
+            status: 'JOURNAL',
+            file: dailyNote,
+            originalText: line,
+            lineNum: i,
+          });
+        }
       }
     }
   }
@@ -98,6 +140,18 @@ const getAllLinesFromFile = (cache: string) => cache.split(/\r?\n/)
 const lineIsValidTodo = (line: string) => {
 //eslint-disable-next-line
   return /^\s*[\-\*]\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?\s*\S/.test(line)
+}
+const lineIsValidTodoEvent = (line: string) => {
+  //eslint-disable-next-line
+    return /^\s*[\-\*]\s\[ \]\s?\s*\S/.test(line)
+}
+const lineIsValidDoneEvent = (line: string) => {
+    //eslint-disable-next-line
+      return /^\s*[\-\*]\s\[x\]\s?\s*\S/.test(line)
+}
+const lineIsValidAnotherEvent = (line: string) => {
+  //eslint-disable-next-line
+    return /^\s*[\-\*]\s\[(X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?\s*\S/.test(line)
 }
 const lineContainsTime = (line: string) => {
   //eslint-disable-next-line

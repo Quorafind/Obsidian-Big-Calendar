@@ -3,23 +3,26 @@ import { Calendar ,  momentLocalizer } from "react-big-calendar";
 import  moment  from "moment";
 import { outputResults,clear } from "../data/parseFile";
 import { events } from "../data/parseFile";
+import { TFile} from "obsidian";
 
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 
 const localizer = momentLocalizer(moment);
 const DragAndDropCalendar = withDragAndDrop(Calendar as any);
 moment.locale("en");
-const dailyEvents = [];
+// const dailyEvents = [];
 
 const styleEvents = (event: any) => {
- const bgeventclr = event.bgColor;
-  const style = {
+  
+//  const bgeventclr = event.bgColor;
+ const style = {
     borderLeft: "0px solid",
     display: "block",
-    background: bgeventclr || '#edb6b4',
+    // background: bgeventclr || '#edb6b4',
     border: '1px solid black'
   }
-  return{ style: style};
+  const className = event.status;
+  return{ className: className,style: style};
 }
 
 const customSlotPropGetter = date => {
@@ -29,6 +32,17 @@ const customSlotPropGetter = date => {
       }
     else return {}
 }
+
+function jumpToEvent( file: TFile, title: string, lineNum: number) {
+  const app = window.app;
+  const leaf = app.workspace.splitActiveLeaf();
+  leaf.openFile(file, {eState: {line: lineNum}});
+}
+
+const onDoubleClickEvent = ({file,title,lineNum}) => {
+  console.log(lineNum);
+  jumpToEvent(file, title, lineNum);
+};
 
 export function reactPreview() {
   if(!events){
@@ -98,6 +112,7 @@ class Dnd extends React.Component<any,any> {
             events={events}
             // onEventDrop={this.moveEvent}
             resizable={true}
+            onDoubleClickEvent={onDoubleClickEvent}
             // onEventResize={this.resizeEvent}
             slotPropGetter={customSlotPropGetter}
             // onDragStart={console.log}
@@ -112,7 +127,7 @@ class Dnd extends React.Component<any,any> {
             tooltipAccessor= { (event) => (event.title)}
             // onDropFromOutside={this.onDropFromOutside}
             // handleDragStart={this.handleDragStart}
-            onSelectEvent={event => alert(event.title)}
+            // onSelectEvent={event => alert(event.title)}
             // onSelectSlot={this.handleSelect}
           />
         </div>
