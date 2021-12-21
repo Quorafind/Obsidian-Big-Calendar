@@ -3,7 +3,7 @@ import { BigCalendar } from "./bigCalendar";
 import { CALENDAR_VIEW_TYPE } from "./data/constants";
 import { App } from "obsidian";
 import addIcons from "src/ui/customIcons";
-import { outputResults } from "./data/parseFile";
+// import { outputResults } from "./data/parseFile";
 
 declare global {
   interface Window {
@@ -34,11 +34,11 @@ export default class ReactStarterPlugin extends Plugin {
 
     // this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
 
-    if (!this.app.workspace.layoutReady) {
-      this.app.workspace.onLayoutReady(async () => outputResults());
-     } else {  
-      outputResults();
-    }
+    // if (!this.app.workspace.layoutReady) {
+    //   this.app.workspace.onLayoutReady(async () => outputResults());
+    //  } else {  
+    //   outputResults();
+    // }
   }
 
   onunload() {

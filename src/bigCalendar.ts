@@ -37,6 +37,7 @@ export class BigCalendar extends ItemView {
 	}
 
 	async onClose() {
+		
 		// Nothing to clean up.
 	}
   

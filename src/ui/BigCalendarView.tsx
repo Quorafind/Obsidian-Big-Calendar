@@ -1,28 +1,30 @@
 import * as React from "react";
 import { Calendar ,  momentLocalizer } from "react-big-calendar";
 import  moment  from "moment";
-import { outputResults,clear } from "../data/parseFile";
-import { events } from "../data/parseFile";
+import { outputResults } from '../data/parseFile';
+// import { output } from "../data/parseFile";
 import { TFile} from "obsidian";
+// import TimeLineComponent from "./TimeLineView";
 
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 
 const localizer = momentLocalizer(moment);
 const DragAndDropCalendar = withDragAndDrop(Calendar as any);
 moment.locale("en");
-// const dailyEvents = [];
+let time = 0;
+
+// const events = await outputResults();
+
 
 const styleEvents = (event: any) => {
-  
-//  const bgeventclr = event.bgColor;
+
  const style = {
     borderLeft: "0px solid",
     display: "block",
-    // background: bgeventclr || '#edb6b4',
     border: '1px solid black'
   }
   const className = event.status;
-  return{ className: className,style: style};
+  return { className: className,style: style };
 }
 
 const customSlotPropGetter = date => {
@@ -33,44 +35,30 @@ const customSlotPropGetter = date => {
     else return {}
 }
 
-function jumpToEvent( file: TFile, title: string, lineNum: number) {
+function jumpToEvent( file: TFile, title: string, lineNum: number ) {
   const app = window.app;
   const leaf = app.workspace.splitActiveLeaf();
   leaf.openFile(file, {eState: {line: lineNum}});
 }
 
 const onDoubleClickEvent = ({file,title,lineNum}) => {
-  console.log(lineNum);
   jumpToEvent(file, title, lineNum);
 };
 
 export function reactPreview() {
-  if(!events){
-    return
-  }else{
-    return (<Dnd />);
-  }
-}
-
-function successCallback(result) {
-}
-
-// 失败的回调函数
-function failureCallback(error) {
-}
-
-function sleep (time) {
-  return new Promise((resolve) => window.setTimeout(resolve, time));
+  return (<Dnd />);
 }
 
 // TODO 
 // eslint-disable-next-line @typescript-eslint/ban-types
 class Dnd extends React.Component<any,any> {
   timerID: number;
-  constructor(props) {
+  // timeOutID: number;
+  output = [];
+  constructor(props: any) {
     super(props)
     this.state = {
-      events: events,
+      events: this.output,
       // displayDragItemInCell: true,
     }
     // this.moveEvent = this.moveEvent.bind(this)
@@ -82,26 +70,40 @@ class Dnd extends React.Component<any,any> {
 
   componentWillUnmount() {
     clearInterval(this.timerID);
+    this.state = null;
+    this.output = null;
   }
 
-  tick() {
-    clear(true)
-    if(!events.length){
-      const dailyEvents = outputResults();
-      const promise2 = dailyEvents.then(successCallback, failureCallback);
-      sleep(200).then(async () => {
-        if(dailyEvents != this.state.events){
-          this.setState({
-            events: [...await dailyEvents]
-          },  
-          ()=>{
-          })
-        }
-        this.forceUpdate
-      })
+  async tick() {
+    time += 1;
+    if(time == 10){
+      this.output.splice(0, this.output.length);
+      clearInterval(this.timerID);
+      console.log(this.timerID);
+      this.timerID = window.setInterval(() => this.tick(), 2000);
+      console.log(this.timerID);
+      time = 0;
     }
-
+    this.output = await outputResults();
+    if(this.state.events != this.output){
+      this.setState({events: this.output})
+    }
   }
+
+  // handleSelect = ({ start, end }) => {
+  //   const title = window.prompt('New Event name')
+  //   if (title)
+  //     this.setState({
+  //       events: [
+  //         ...this.state.events,
+  //         {
+  //           start,
+  //           end,
+  //           title,
+  //         },
+  //     ],
+  //   })
+  // }
 
   render() {
     return (
@@ -109,7 +111,7 @@ class Dnd extends React.Component<any,any> {
           <DragAndDropCalendar
             selectable={true}
             localizer={localizer}
-            events={events}
+            events={this.output}
             // onEventDrop={this.moveEvent}
             resizable={true}
             onDoubleClickEvent={onDoubleClickEvent}
@@ -117,7 +119,7 @@ class Dnd extends React.Component<any,any> {
             slotPropGetter={customSlotPropGetter}
             // onDragStart={console.log}
             defaultView="month"
-            style={{ height: "100vh" }}
+            style={{ height: "auto" }}
             eventPropGetter={styleEvents} 
             popup={true}
             // dragFromOutsideItem={
