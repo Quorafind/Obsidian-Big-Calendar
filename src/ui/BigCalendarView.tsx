@@ -79,9 +79,7 @@ class Dnd extends React.Component<any,any> {
     if(time == 10){
       this.output.splice(0, this.output.length);
       clearInterval(this.timerID);
-      console.log(this.timerID);
       this.timerID = window.setInterval(() => this.tick(), 2000);
-      console.log(this.timerID);
       time = 0;
     }
     this.output = await outputResults();
@@ -119,7 +117,7 @@ class Dnd extends React.Component<any,any> {
             slotPropGetter={customSlotPropGetter}
             // onDragStart={console.log}
             defaultView="month"
-            style={{ height: "auto" }}
+            style={{ height: "100vh" }}
             eventPropGetter={styleEvents} 
             popup={true}
             // dragFromOutsideItem={
