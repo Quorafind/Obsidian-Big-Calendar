@@ -34,6 +34,7 @@ export async function getTasksForDailyNote(
       const line = fileLines[i];
       const rawText = extractTextFromTodoLine(line);
       if (line.length === 0) continue
+      if (lineIsNotTasksTodo(line)) continue
       if (lineIsValidTodo(line) || lineContainsTime(line)) {
         if(lineContainsTime(line)){
           startDate.hours(parseInt(extractHourFromBulletLine(line)));
@@ -167,6 +168,10 @@ const lineIsValidTodo = (line: string) => {
 //eslint-disable-next-line
   return /^\s*[\-\*]\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?\s*\S/.test(line)
 }
+const lineIsNotTasksTodo = (line: string) => {
+  //eslint-disable-next-line
+    return /(⏫|🛫|📅|📆|(@{)|⏳|⌛|(\[due\:\:)|(\[created\:\:)|(\[completion\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/.test(line)
+  }
 const lineIsValidTodoEvent = (line: string) => {
 //eslint-disable-next-line
     return /^\s*[\-\*]\s\[ \]\s?\s*\S/.test(line)

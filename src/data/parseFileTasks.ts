@@ -283,6 +283,56 @@ export async function getTasksFromFiles(
               lineNum: i,
             });
           }
+      }else if(startDate && !dueDate && !scheduleDate){   
+        if(lineIsValidTodoEvent(line)){
+            dailyEvents.push({
+              id: i,
+              title: rawText,
+              start: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              end: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              resourceId: i,
+              status: 'TODO',
+              file: file,
+              originalText: line,
+              lineNum: i,
+            });
+          }else if(lineIsValidDoneEvent(line)){
+            dailyEvents.push({
+              id: i,
+              title: rawText,
+              start: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              end: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              resourceId: i,
+              status: 'DONE',
+              file: file,
+              originalText: line,
+              lineNum: i,
+            });
+          }else if(lineIsValidAnotherEvent(line)){
+            dailyEvents.push({
+              id: i,
+              title: rawText,
+              start: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              end: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              resourceId: i,
+              status: 'ANOTHER',
+              file: file,
+              originalText: line,
+              lineNum: i,
+            });
+          }else{
+            dailyEvents.push({
+              id: i,
+              title: rawText,
+              start: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              end: moment(getStartDateFromBulletLine(line), "YYYY-MM-DD").toDate(),
+              resourceId: i,
+              status: 'JOURNAL',
+              file: file,
+              originalText: line,
+              lineNum: i,
+            });
+          }
       }
       
     }
@@ -367,17 +417,17 @@ const lineContainsTime = (line: string) => {
     return /^\s*(\-|\*)\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s)?(\<time\>)?\d{1,2}\:\d{2}(.*)$/.test(line)
   }
 //eslint-disable-next-line
-const extractTextFromTodoLine = (line: string) => /^(\s*)?(\-|\*)\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?(\<time\>)?((\d{1,2})\:(\d{2}))?(\<\/time\>)?(.+?)(?=(⏫|🛫|📅|📆|(@{)|⏳|⌛))/.exec(line)?.[9]
+const extractTextFromTodoLine = (line: string) => /^(\s*)?(\-|\*)\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?(\<time\>)?((\d{1,2})\:(\d{2}))?(\<\/time\>)?(.+?)(?=(⏫|🛫|📅|📆|(@{)|⏳|⌛|(\[due\:\:)|(\[created\:\:)))/.exec(line)?.[9]
 //eslint-disable-next-line
 // const extractHourFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[4]
 //eslint-disable-next-line
 // const extractMinFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[5]
 //eslint-disable-next-line
-const getStartDateFromBulletLine = (line: string) => /^(.*)\s🛫 ?(\d{4}-\d{2}-\d{2})(.*)$/.exec(line)?.[2]
+const getStartDateFromBulletLine = (line: string) => /\s(🛫|(\[created\:\:)|➕) ?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[3]
 //eslint-disable-next-line
-const getDueDateFromBulletLine = (line: string) => /^(.*)\s(📅|📆|(@{)) ?(\d{4}-\d{2}-\d{2})(.*)$/.exec(line)?.[4]
+const getDueDateFromBulletLine = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[4]
 //eslint-disable-next-line
-const getScheduledDateFromBulletLine = (line: string) => /^(.*)\s(⏳|⌛) ?(\d{4}-\d{2}-\d{2})(.*)$/.exec(line)?.[3]
+const getScheduledDateFromBulletLine = (line: string) => /\s(⏳|⌛) ?(\d{4}-\d{2}-\d{2})/.exec(line)?.[2]
 // thanks to Luke Leppan and the Better Word Count plugin
 //eslint-disable-next-line
 const tagFromLine = (line: string) => /\s(#\S{0,})\s/
