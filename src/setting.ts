@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: BigCalendarSettings = {
 export class BigCalendarSettingTab extends PluginSettingTab {
 
     plugin: BigCalendarPlugin;
+    //eslint-disable-next-line
     private applyDebounceTimer: number = 0;
 
     constructor(app: App, plugin: BigCalendarPlugin) {
@@ -29,6 +30,7 @@ export class BigCalendarSettingTab extends PluginSettingTab {
         }, 100);
     }
 
+    //eslint-disable-next-line
     async hide() {}
 
     async display() {

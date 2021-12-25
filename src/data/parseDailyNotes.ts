@@ -168,11 +168,11 @@ const lineIsValidTodo = (line: string) => {
   return /^\s*[\-\*]\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?\s*\S/.test(line)
 }
 const lineIsValidTodoEvent = (line: string) => {
-  //eslint-disable-next-line
+//eslint-disable-next-line
     return /^\s*[\-\*]\s\[ \]\s?\s*\S/.test(line)
 }
 const lineIsValidDoneEvent = (line: string) => {
-    //eslint-disable-next-line
+//eslint-disable-next-line
       return /^\s*[\-\*]\s\[x\]\s?\s*\S/.test(line)
 }
 const lineIsValidAnotherEvent = (line: string) => {

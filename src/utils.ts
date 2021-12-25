@@ -46,7 +46,7 @@ export function escapeRegExp(text) {
 
 //credit to chhoumann, original code from: https://github.com/chhoumann/quickadd/blob/7536a120701a626ef010db567cea7cf3018e6c82/src/utility.ts#L130
 export function getLinesInString(input: string) {
-  let lines: string[] = [];
+  const lines: string[] = [];
   let tempString = input;
 
   while (tempString.contains("\n")) {

@@ -3,7 +3,6 @@ import { BigCalendar } from "./bigCalendar";
 import { CALENDAR_VIEW_TYPE } from "./data/constants";
 import { App } from "obsidian";
 import addIcons from "src/ui/customIcons";
-import { outputTasksResults } from "./data/parseFileTasks";
 // import { outputResults } from "./data/parseFile";
 import { BigCalendarSettingTab,DEFAULT_SETTINGS,BigCalendarSettings } from './setting';
 

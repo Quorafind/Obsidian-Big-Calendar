@@ -6,6 +6,7 @@ export default class GenericInputPrompt extends Modal {
 
     private resolvePromise: (input: string) => void;
     private rejectPromise: (reason?: any) => void;
+    //eslint-disable-next-line
     private didSubmit: boolean = false;
     private inputComponent: TextComponent;
     private input: string;
@@ -74,7 +75,9 @@ export default class GenericInputPrompt extends Modal {
         buttonBarContainer.style.marginTop = '1rem';
     }
 
+    //eslint-disable-next-line
     private submitClickCallback = (evt: MouseEvent) => this.submit();
+    //eslint-disable-next-line
     private cancelClickCallback = (evt: MouseEvent) => this.cancel();
 
     private submitEnterCallback = (evt: KeyboardEvent) => {

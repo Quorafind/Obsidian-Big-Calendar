@@ -1,7 +1,6 @@
 
 import moment from "moment";
 import { TFile,FileSystemAdapter } from "obsidian";
-import { getDateFromFile } from "obsidian-daily-notes-interface";
 
 export class DailyNotesFolderMissingError extends Error {}
 
@@ -10,7 +9,7 @@ export async function getRemainingTasks(note: TFile): Promise<number> {
     return 0;
   }
   const { vault } = window.app;
-  let fileContents = await vault.cachedRead(note);
+  const fileContents = await vault.cachedRead(note);
   //eslint-disable-next-line
   const matchLength = (fileContents.match(/(-|\*) (\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s)?/g) || []).length;
   return matchLength;
@@ -334,7 +333,6 @@ export async function outputTasksResults(): Promise<any[]> {
       // console.log(getPath(dailyNotes[string].path));
     }
   }
-
   // dailyEvents.splice(0, dailyEvents.length);
   return events;
 }
@@ -346,22 +344,24 @@ export async function outputTasksResults(): Promise<any[]> {
 //Taks dueDateRegex = /[📅📆🗓] ?(\d{4}-\d{2}-\d{2})$/u;
 
 const getAllLinesFromFile = (cache: string) => cache.split(/\r?\n/)
-const lineIsValidTodo = (line: string) => {
 //eslint-disable-next-line
-  return /^\s*(\-|\*)\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?(.*)$/.test(line)
-}
+// const lineIsValidTodo = (line: string) => {
+// //eslint-disable-next-line
+//   return /^\s*(\-|\*)\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?(.*)$/.test(line)
+// }
 const lineIsValidTodoEvent = (line: string) => {
-  //eslint-disable-next-line
+//eslint-disable-next-line
     return /^\s*(\-|\*)\s\[ \]\s?(.*)$/.test(line)
 }
 const lineIsValidDoneEvent = (line: string) => {
-    //eslint-disable-next-line
+//eslint-disable-next-line
       return /^\s*(\-|\*)\s\[x\]\s?(.*)$/.test(line)
 }
 const lineIsValidAnotherEvent = (line: string) => {
   //eslint-disable-next-line
     return /^\s*(\-|\*)\s\[(X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?(.*)$/.test(line)
 }
+//eslint-disable-next-line
 const lineContainsTime = (line: string) => {
   //eslint-disable-next-line
     return /^\s*(\-|\*)\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s)?(\<time\>)?\d{1,2}\:\d{2}(.*)$/.test(line)
@@ -369,11 +369,11 @@ const lineContainsTime = (line: string) => {
 //eslint-disable-next-line
 const extractTextFromTodoLine = (line: string) => /^(\s*)?(\-|\*)\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?(\<time\>)?((\d{1,2})\:(\d{2}))?(\<\/time\>)?(.+?)(?=(⏫|🛫|📅|📆|(@{)|⏳|⌛))/.exec(line)?.[9]
 //eslint-disable-next-line
-const extractHourFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[4]
+// const extractHourFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[4]
 //eslint-disable-next-line
-const extractMinFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[5]
+// const extractMinFromBulletLine = (line: string) => /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[5]
 //eslint-disable-next-line
-const getStartDateFromBulletLine = (line: string) => /^(.*)\s🛫 ?(\d{4}-\d{2}-\d{2})(.*)$/.exec(line)?.[3]
+const getStartDateFromBulletLine = (line: string) => /^(.*)\s🛫 ?(\d{4}-\d{2}-\d{2})(.*)$/.exec(line)?.[2]
 //eslint-disable-next-line
 const getDueDateFromBulletLine = (line: string) => /^(.*)\s(📅|📆|(@{)) ?(\d{4}-\d{2}-\d{2})(.*)$/.exec(line)?.[4]
 //eslint-disable-next-line
