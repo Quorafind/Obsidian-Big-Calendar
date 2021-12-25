@@ -1,16 +1,18 @@
-import{WorkspaceLeaf,ItemView } from "obsidian";
+import { WorkspaceLeaf , ItemView } from "obsidian";
 import {CALENDAR_VIEW_TYPE} from './data/constants';
 import React from "react";
 import ReactDOM from "react-dom";
+import { closeTaskTimerID, closeTimerID } from "./ui/BigCalendarView";
 
-import { reactPreview } from "./ui/BigCalendarView";
-import type MyPlugin from './index';
+import { reactPreview } from './ui/BigCalendarView';
+import type BigCalendarPlugin from './index';
+import { outputTasksResults } from "./data/parseFileTasks";
 
 export class BigCalendar extends ItemView {
-	plugin: MyPlugin;
+	plugin: BigCalendarPlugin;
 	private reactComponent: React.ReactElement;
 
-	constructor(leaf: WorkspaceLeaf, plugin: MyPlugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: BigCalendarPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 	}
@@ -28,7 +30,16 @@ export class BigCalendar extends ItemView {
 		return CALENDAR_VIEW_TYPE;
 	}
 
-	async onOpen(): Promise<void> { 
+	async onOpen(): Promise<void> {
+
+		await this.plugin.loadSettings();
+
+		InsertAfter = this.plugin.settings.InsertAfter;
+		StartDate = this.plugin.settings.StartDate;
+		this.registerInterval(closeTimerID);
+		this.registerInterval(closeTaskTimerID);
+
+		outputTasksResults();
 
 		this.reactComponent = React.createElement(reactPreview);
 
@@ -37,8 +48,11 @@ export class BigCalendar extends ItemView {
 	}
 
 	async onClose() {
-		
+		clearInterval(closeTimerID);
+		clearInterval(closeTaskTimerID);
 		// Nothing to clean up.
 	}
-  
 }
+
+export let InsertAfter: string;
+export let StartDate: string;

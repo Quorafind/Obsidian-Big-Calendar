@@ -1,19 +1,26 @@
-import { Plugin, Notice} from "obsidian";
+import { Plugin, Notice } from "obsidian";
 import { BigCalendar } from "./bigCalendar";
 import { CALENDAR_VIEW_TYPE } from "./data/constants";
 import { App } from "obsidian";
 import addIcons from "src/ui/customIcons";
+import { outputTasksResults } from "./data/parseFileTasks";
 // import { outputResults } from "./data/parseFile";
+import { BigCalendarSettingTab,DEFAULT_SETTINGS,BigCalendarSettings } from './setting';
 
 declare global {
   interface Window {
     app: App;
+    plugin: BigCalendarPlugin;
   }
 }
 
-
-export default class ReactStarterPlugin extends Plugin {
+export default class BigCalendarPlugin extends Plugin {
+  public settings: BigCalendarSettings;
+  // static settings: any;
   async onload(): Promise<void> {
+
+    await this.loadSettings();
+    this.addSettingTab(new BigCalendarSettingTab(this.app, this));
 
     this.registerView(
       CALENDAR_VIEW_TYPE,(leaf) => new BigCalendar(leaf, this),
@@ -32,13 +39,23 @@ export default class ReactStarterPlugin extends Plugin {
       hotkeys: [],
     });
 
+    await this.loadSettings();
+
     // this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
 
     // if (!this.app.workspace.layoutReady) {
-    //   this.app.workspace.onLayoutReady(async () => outputResults());
+    //   this.app.workspace.onLayoutReady(async () => outputTasksResults());
     //  } else {  
-    //   outputResults();
+    //   outputTasksResults();
     // }
+  }
+
+  public async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
   }
 
   onunload() {
