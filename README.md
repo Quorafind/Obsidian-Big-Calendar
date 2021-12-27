@@ -51,5 +51,5 @@ Download the latest release. Extract and put the three files (main.js, manifest.
 
 If you are enjoying Big Calendar then please support my work and enthusiasm by buying me a coffee on [https://www.buymeacoffee.com/boninall](https://www.buymeacoffee.com/boninall).
 
-[<img style="float:left" src="https://s2.loli.net/2021/12/16/wJceg2MpithUHqN.png" width="200">](https://www.buymeacoffee.com/boninall)
+<a href="https://www.buymeacoffee.com/boninall"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=boninall&button_colour=6495ED&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00"></a>
 
