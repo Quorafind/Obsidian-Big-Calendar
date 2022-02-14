@@ -1,0 +1,1 @@
+export const CALENDAR_VIEW_TYPE = 'calendar_view';
