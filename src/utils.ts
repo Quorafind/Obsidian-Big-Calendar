@@ -40,12 +40,12 @@ export function getDateUIDFromFile(file: TFile | null): string {
 }
 
 // https://stackoverflow.com/questions/3115150/how-to-escape-regular-expression-special-characters-using-javascript
-export function escapeRegExp(text) {
+export function escapeRegExp(text: string): string {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
 //credit to chhoumann, original code from: https://github.com/chhoumann/quickadd/blob/7536a120701a626ef010db567cea7cf3018e6c82/src/utility.ts#L130
-export function getLinesInString(input: string) {
+export function getLinesInString(input: string): string[] {
   const lines: string[] = [];
   let tempString = input;
 
