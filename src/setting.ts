@@ -61,7 +61,9 @@ export class BigCalendarSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName(t('Insert after heading'))
-      .setDesc(t('You should set the same heading below if you want to insert and process events below the same heading.'))
+      .setDesc(
+        t('You should set the same heading below if you want to insert and process events below the same heading.'),
+      )
       .addText((text) =>
         text
           .setPlaceholder('# JOURNAL')
