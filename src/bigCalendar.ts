@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom';
 
 import App from './App';
 // import type BCalendar from './index';
-import type  BigCalendarPlugin from './index';
+import type BigCalendarPlugin from './index';
 import {dailyNotesService, eventService} from './services';
 import {getDateFromFile} from 'obsidian-daily-notes-interface';
 
@@ -82,8 +82,8 @@ export class BigCalendar extends ItemView {
 
     InsertAfter = this.plugin.settings.InsertAfter;
     StartDate = this.plugin.settings.StartDate;
-	DefaultEventComposition = this.plugin.settings.DefaultEventComposition;
-	ProcessEntriesBelow = this.plugin.settings.ProcessEntriesBelow;
+    DefaultEventComposition = this.plugin.settings.DefaultEventComposition;
+    ProcessEntriesBelow = this.plugin.settings.ProcessEntriesBelow;
 
     this.bigCalendarComponent = React.createElement(App);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
