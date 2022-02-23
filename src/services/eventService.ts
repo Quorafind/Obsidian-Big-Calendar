@@ -3,7 +3,7 @@ import {waitForInsert} from '../obComponents/obCreateEvent';
 import {changeEvent} from '../obComponents/obUpdateEvent';
 import api from '../helpers/api';
 // import userService from "./userService";
-import { stringOrDate } from 'react-big-calendar';
+import {stringOrDate} from 'react-big-calendar';
 
 class EventService {
   public initialized = false;
@@ -78,7 +78,8 @@ class EventService {
   //   await api.deleteEvent(id);
   // }
 
-  public editEvent(event: Model.Event) {
+  public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate) {
+    await this.updateEvent(event.id, event.originalContent, event.title, event.eventType, startDate, endDate, event.end);
     appStore.dispatch({
       type: 'EDIT_EVENT',
       payload: event,
@@ -117,13 +118,21 @@ class EventService {
     });
   }
 
-  public async createEvent(text: string, startDate: stringOrDate): Promise<Model.Event> {
-    const event = await waitForInsert(text, startDate);
+  public async createEvent(text: string, startDate: stringOrDate, endDate: stringOrDate): Promise<Model.Event> {
+    const event = await waitForInsert(text, startDate, endDate);
     return event;
   }
 
-  public async updateEvent(eventId: string, originalText: string, text: string, type: string): Promise<Model.Event> {
-    const event = await changeEvent(eventId, originalText, text, type);
+  public async updateEvent(
+    eventId: string,
+    originalText: string,
+    text: string,
+    type: string,
+    startDate: stringOrDate,
+    endDate: stringOrDate,
+    originalEndDate: Date,
+  ): Promise<Model.Event> {
+    const event = await changeEvent(eventId, originalText, text, type, startDate, endDate, originalEndDate);
     return event;
   }
 }

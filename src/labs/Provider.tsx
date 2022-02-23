@@ -1,5 +1,7 @@
-import {useEffect, useState} from 'react';
+import react, { useEffect } from 'react';
 import {Store} from './createStore';
+import useState from 'react-usestateref';
+
 
 interface Props {
   children: React.ReactElement;
@@ -13,7 +15,9 @@ interface Props {
  */
 const Provider: React.FC<Props> = (props: Props) => {
   const {children, store, context: Context} = props;
-  const [appState, setAppState] = useState(store.getState());
+  const [appState, setAppState, appStateRef] = useState(store.getState());
+  console.log(appStateRef.current);
+  console.log("render 5th");
 
   useEffect(() => {
     const unsubscribe = store.subscribe((ns) => {

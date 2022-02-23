@@ -19,6 +19,7 @@ type AppStateActions =
   | dailyNotesStore.Actions;
 
 const appStore = createStore<AppState, AppStateActions>(
+  
   {
     globalState: globalStore.defaultState,
     locationState: locationStore.defaultState,
