@@ -14,6 +14,8 @@ declare namespace Model {
       title: string;
       eventType?: string;
       path?: string;
+      originalContent?: string;
+      allDay: boolean;
     }
   
     interface Query extends BaseModel {

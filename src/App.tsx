@@ -1,6 +1,6 @@
 import {useContext, useEffect} from 'react';
 import Home from './pages/Home';
-import {globalStateService} from './services';
+import {eventService, globalStateService} from './services';
 import './less/Calendar.less';
 import Provider from './labs/Provider';
 import appContext from './stores/appContext';
@@ -30,6 +30,8 @@ function App() {
       window.removeEventListener('resize', handleWindowResize);
     };
   }, []);
+
+  console.log("render 6th");
 
   return (
     <>

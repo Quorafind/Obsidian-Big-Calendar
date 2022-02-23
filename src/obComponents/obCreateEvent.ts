@@ -13,6 +13,7 @@ interface MContent {
 
 // https://stackoverflow.com/questions/3115150/how-to-escape-regular-expression-special-characters-using-javascript
 export function escapeRegExp(text: string): string {
+  //eslint-disable-next-line
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
@@ -32,15 +33,22 @@ export function getLinesInString(input: string): string[] {
   return lines;
 }
 
-export async function waitForInsert(EventContent: string, startDate: stringOrDate): Promise<Model.Event> {
+export async function waitForInsert(
+  EventContent: string,
+  startDate: stringOrDate,
+  endDate: stringOrDate,
+): Promise<Model.Event> {
   // const plugin = window.plugin;
   const {vault} = appStore.getState().dailyNotesState.app;
   // const removeEnter = EventContent.replace(/\n/g, '<br>');
   // const date = moment();
   // const timeHour = date.format('HH');
   // const timeMinute = date.format('mm');
-  let lineNum;
-  const startTime = startDate.toString();
+  let lineNum: number;
+  // const startTime = startDate.toString();
+  // const endTime = endDate.toString();
+  const eventStartMoment = moment(startDate);
+  const eventEndMoment = moment(endDate);
   // const timeText = String(timeHour) + `:` + String(timeMinute);
 
   // if (isList && DefaultEventComposition === '') {
@@ -55,14 +63,95 @@ export async function waitForInsert(EventContent: string, startDate: stringOrDat
   //   newEvent = `- ` + DefaultEventComposition.replace(/{TIME}/g, timeText).replace(/{CONTENT}/g, removeEnter);
   // }
 
+  if (eventStartMoment.isBefore(eventEndMoment)) {
+    if (/\^\S{6}$/.test(EventContent)) {
+      let endDate = '';
+      let dueLabel = '📅';
+      if (ifDueDate(EventContent)) {
+        dueLabel = getDueLabel(EventContent);
+        endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD');
+        const dueDate = getDueDate(EventContent);
+        EventContent = EventContent.replace(dueDate, endDate);
+      } else {
+        if (
+          eventEndMoment.diff(eventStartMoment, 'days') > 0 ||
+          eventEndMoment.format('DD') !== eventStartMoment.format('DD')
+        ) {
+          // endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
+          if (EventContent[EventContent.length - 1] === ' ') {
+            endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
+          } else {
+            endDate = ' ' + dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
+          }
+        }
+        if (
+          eventEndMoment.diff(eventStartMoment, 'minutes') == 30 &&
+          eventEndMoment.diff(eventStartMoment, 'hours') == 0 &&
+          eventEndMoment.diff(eventStartMoment, 'days') == 0
+        ) {
+          EventContent = EventContent.slice(EventContent.length - 7) + endDate + EventContent.slice(-7);
+        } else {
+          // EventContent = EventContent.slice(EventContent.length - 7) + endDate;
+          if (EventContent[EventContent.length - 1] === ' ') {
+            EventContent = EventContent + endDate + '⏲ ' + eventEndMoment.format('HH:mm') + EventContent.slice(-7);
+          } else {
+            EventContent = EventContent + endDate + ' ⏲ ' + eventEndMoment.format('HH:mm') + EventContent.slice(-7);
+          }
+        }
+      }
+    } else {
+      let endDate = '';
+      let dueLabel = '📅';
+      // if (ifDueDate(EventContent)) {
+      //   dueLabel = getDueLabel(EventContent);
+      //   endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD');
+      //   const dueDate = getDueDate(EventContent);
+      //   EventContent = EventContent.replace(dueDate, endDate);
+      // } else {
+      if (
+        eventEndMoment.diff(eventStartMoment, 'days') > 0 ||
+        eventEndMoment.format('DD') !== eventStartMoment.format('DD')
+      ) {
+        if (EventContent[EventContent.length - 1] === ' ') {
+          endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
+        } else {
+          endDate = ' ' + dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
+        }
+      }
+
+      EventContent = EventContent + endDate;
+
+      if (
+        eventEndMoment.diff(eventStartMoment, 'minutes') != 30 ||
+        eventEndMoment.diff(eventStartMoment, 'hours') != 0 ||
+        eventEndMoment.diff(eventStartMoment, 'days') != 0
+      ) {
+        if (EventContent[EventContent.length - 1] === ' ') {
+          EventContent = EventContent + '⏲ ' + eventEndMoment.format('HH:mm');
+        } else {
+          EventContent = EventContent + ' ⏲ ' + eventEndMoment.format('HH:mm');
+        }
+      }
+      // }
+    }
+    // if(/\^\S{6}$/.test(EventContent)){
+    //   EventContent = EventContent.slice(EventContent.length - 7) + '⏲️ ' + eventEndMoment.format('HH:mm') + EventContent.slice(-7);
+    // }else{
+    //   EventContent = EventContent + '⏲️ ' + eventEndMoment.format('HH:mm');
+    // }
+  }
   const newEvent =
     `- [ ] ` +
-    DefaultEventComposition.replace(/{TIME}/g, moment(startTime).format('HH:mm')).replace(/{CONTENT}/g, EventContent);
+    DefaultEventComposition.replace(/{TIME}/g, eventStartMoment.format('HH:mm')).replace(/{CONTENT}/g, EventContent);
 
   const dailyNotes = await getAllDailyNotes();
-  const existingFile = getDailyNote(moment(startDate), dailyNotes);
+  const existingFile = getDailyNote(eventStartMoment, dailyNotes);
+  //eslint-disable-next-line
+  const haveEndTime = /⏲\s(\d{1,2})\:(\d{2})/.test(newEvent);
+  //eslint-disable-next-line
+  const haveEndDate = /\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/.test(newEvent);
   if (!existingFile) {
-    const file = await createDailyNote(moment(startDate));
+    const file = await createDailyNote(eventStartMoment);
     await dailyNotesService.getMyAllDailyNotes();
     const fileContents = await vault.read(file);
     const newFileContent = await insertAfterHandler(InsertAfter, newEvent, fileContents);
@@ -72,6 +161,18 @@ export async function waitForInsert(EventContent: string, startDate: stringOrDat
       lineNum = allLines.length + 1;
     } else {
       lineNum = newFileContent.posNum + 1;
+    }
+
+    // const rawText = EventContent;
+
+    if (haveEndTime) {
+      //eslint-disable-next-line
+      EventContent = EventContent.replace(/⏲\s(\d{1,2})\:(\d{2})/, '');
+    }
+
+    if (haveEndDate) {
+      //eslint-disable-next-line
+      EventContent = EventContent.replace(/\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/, '');
     }
     // if (isList) {
     //   return {
@@ -84,11 +185,13 @@ export async function waitForInsert(EventContent: string, startDate: stringOrDat
     //   };
     // } else {
     return {
-      id: moment(startDate).format('YYYYMMDDHHmm') + '00' + lineNum,
+      id: eventStartMoment.format('YYYYMMDDHHmm') + '00' + lineNum,
       title: EventContent,
-      start: moment(startDate).toDate(),
-      end: moment(startDate).toDate(),
+      originalContent: newEvent,
+      start: eventStartMoment.toDate(),
+      end: eventEndMoment.toDate(),
       eventType: 'TASK-TODO',
+      allDay: false,
       // };
     };
   } else {
@@ -101,6 +204,16 @@ export async function waitForInsert(EventContent: string, startDate: stringOrDat
     } else {
       lineNum = newFileContent.posNum + 1;
     }
+
+    if (haveEndTime) {
+      //eslint-disable-next-line
+      EventContent = EventContent.replace(/⏲\s(\d{1,2})\:(\d{2})/, '');
+    }
+
+    if (haveEndDate) {
+      //eslint-disable-next-line
+      EventContent = EventContent.replace(/\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/, '');
+    }
     // if (isList) {
     //   return {
     //     id: date.format('YYYYMMDDHHmm') + '00' + lineNum,
@@ -112,18 +225,24 @@ export async function waitForInsert(EventContent: string, startDate: stringOrDat
     //   };
     // } else {
     return {
-      id: moment(startDate).format('YYYYMMDDHHmm') + '00' + lineNum,
+      id: eventStartMoment.format('YYYYMMDDHHmm') + '00' + lineNum,
       title: EventContent,
-      start: moment(startDate).toDate(),
-      end: moment(startDate).toDate(),
+      originalContent: newEvent,
+      start: eventStartMoment.toDate(),
+      end: eventEndMoment.toDate(),
       eventType: 'TASK-TODO',
+      allDay: false,
     };
     // }
   }
 }
 
 //credit to chhoumann, original code from: https://github.com/chhoumann/quickadd
-export async function insertAfterHandler(targetString: string, formatted: string, fileContent: string): Promise<MContent> {
+export async function insertAfterHandler(
+  targetString: string,
+  formatted: string,
+  fileContent: string,
+): Promise<MContent> {
   // const targetString: string = plugin.settings.InsertAfter;
   //eslint-disable-next-line
   const targetRegex = new RegExp(`\s*${await escapeRegExp(targetString)}\s*`);
@@ -148,8 +267,8 @@ export async function insertAfterHandler(targetString: string, formatted: string
     let endOfSectionIndex: number;
 
     for (let i = nextHeaderPositionAfterTargetPosition + targetPosition; i > targetPosition; i--) {
-      const lineIsNewline: boolean = /^[\s\n ]*$/.test(fileContentLines[i]);
-      if (!lineIsNewline) {
+      const lineIsEventContent: boolean = /^[\s\n ]*$/.test(fileContentLines[i]);
+      if (!lineIsEventContent) {
         endOfSectionIndex = i;
         break;
       }
@@ -206,3 +325,9 @@ export async function insertTextAfterPositionInBody(
 }
 
 const getAllLinesFromFile = (cache: string) => cache.split(/\r?\n/);
+//eslint-disable-next-line
+const ifDueDate = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:))\s?(\d{4}-\d{2}-\d{2})(\])?/.test(line);
+//eslint-disable-next-line
+const getDueLabel = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:))\s?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[1];
+//eslint-disable-next-line
+const getDueDate = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:))\s?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[0];

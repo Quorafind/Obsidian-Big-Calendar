@@ -8,6 +8,7 @@ interface OnlyWhenProps {
 
 const OnlyWhen: React.FC<OnlyWhenProps> = (props: OnlyWhenProps) => {
   const { children, when } = props;
+  console.log("render 4th"); 
   return when ? <>{children}</> : null;
 };
 

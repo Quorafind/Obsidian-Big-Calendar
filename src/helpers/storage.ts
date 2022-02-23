@@ -15,7 +15,8 @@ interface StorageData {
   shouldUseMarkdownParser: boolean;
   // 视图状态
   viewCache: View;
-
+  // 滚动高度
+  currentDate: Date;
 }
 
 type StorageKey = keyof StorageData;

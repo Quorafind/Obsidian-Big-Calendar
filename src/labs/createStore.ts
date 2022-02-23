@@ -27,6 +27,8 @@ function createStore<S extends State, A extends Action>(
   const listeners: Listener<S>[] = [];
   let currentState = preloadedState;
 
+  
+
   const dispatch = (action: A) => {
     const nextState = reducer(currentState, action);
     const prevState = currentState;

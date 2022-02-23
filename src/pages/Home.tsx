@@ -11,7 +11,7 @@ function Home() {
   } = useContext(appContext);
   // const { app } = dailyNotesService.getState();
   const loadingState = useLoading();
-  // const refresh = useRefresh();
+  //   // const refresh = useRefresh();
 
   useEffect(() => {
     loadingState.setFinish();
@@ -20,9 +20,9 @@ function Home() {
   return (
     <>
       {/* {loadingState.isLoading ? null : ( */}
-      <section id="page-wrapper">
-        <main className="content-wrapper">{homeRouterSwitch(pathname)}</main>
-      </section>
+        <section id="page-wrapper">
+          <main className="content-wrapper">{homeRouterSwitch(pathname)}</main>
+        </section>
       {/* )} */}
     </>
   );
