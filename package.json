@@ -23,7 +23,8 @@
     "react-big-calendar": "^0.38.1",
     "react-dom": "^17.0.1",
     "svelte": "^3.44.2",
-    "tslib": "^2.1.0"
+    "tslib": "^2.1.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.13.8",

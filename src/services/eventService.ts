@@ -1,15 +1,16 @@
-import appStore from '../stores/appStore';
+import useEventStore from '../stores/eventStore';
 import {waitForInsert} from '../obComponents/obCreateEvent';
 import {changeEvent} from '../obComponents/obUpdateEvent';
 import api from '../helpers/api';
 // import userService from "./userService";
 import {stringOrDate} from 'react-big-calendar';
+import {deleteForever} from '../obComponents/obDeleteEvent';
 
 class EventService {
   public initialized = false;
 
   public getState() {
-    return appStore.getState().eventState;
+    return useEventStore.getState();
   }
 
   public async fetchAllEvents() {
@@ -23,12 +24,8 @@ class EventService {
     for (const m of data) {
       events.push(m);
     }
-    appStore.dispatch({
-      type: 'SET_EVENTS',
-      payload: {
-        events,
-      },
-    });
+
+    useEventStore.getState().setEvents(events);
 
     if (!this.initialized) {
       this.initialized = true;
@@ -38,52 +35,60 @@ class EventService {
   }
 
   public pushEvent(event: Model.Event) {
-    appStore.dispatch({
-      type: 'INSERT_EVENT',
-      payload: {
-        event: {
-          ...event,
-        },
-      },
+    useEventStore.getState().insertEvent({
+      ...event,
     });
   }
 
   public getEventById(id: string) {
-    for (const m of this.getState().events) {
-      if (m.id === id) {
-        return m;
-      }
-    }
-
-    return null;
+    const {events} = this.getState();
+    return events.find((item) => item.id === id);
   }
 
   public async hideEventById(id: string) {
-    await api.hideEvent(id);
-    appStore.dispatch({
-      type: 'DELETE_EVENT_BY_ID',
-      payload: {
-        id: id,
-      },
-    });
+    useEventStore.getState().deleteEventById(id);
+
+    try {
+      await api.hideEvent(id);
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   }
 
-  // public async restoreEventById(id: string) {
-  //   await api.restoreEvent(id);
-  //   // eventService.clearEvents();
-  //   // eventService.fetchAllEvents();
-  // }
+  public async deleteEventById(id: string) {
+    useEventStore.getState().deleteEventById(id);
 
-  // public async deleteEventById(id: string) {
-  //   await api.deleteEvent(id);
-  // }
+    try {
+      await deleteForever(id);
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
 
   public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate) {
-    await this.updateEvent(event.id, event.originalContent, event.title, event.eventType, startDate, endDate, event.end);
-    appStore.dispatch({
-      type: 'EDIT_EVENT',
-      payload: event,
-    });
+    useEventStore.getState().editEvent(event);
+
+    try {
+      if (startDate && endDate && event.id && event.title) {
+        return await changeEvent(
+          event.id,
+          event.title,
+          event.title,
+          event.eventType || '',
+          startDate,
+          endDate,
+          new Date(event.end),
+        );
+      }
+      return event;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
   }
 
   // public updateTagsState() {
@@ -110,17 +115,11 @@ class EventService {
   // }
 
   public clearEvents() {
-    appStore.dispatch({
-      type: 'SET_EVENTS',
-      payload: {
-        events: [],
-      },
-    });
+    useEventStore.getState().setEvents([]);
   }
 
   public async createEvent(text: string, startDate: stringOrDate, endDate: stringOrDate): Promise<Model.Event> {
-    const event = await waitForInsert(text, startDate, endDate);
-    return event;
+    return await waitForInsert(text, startDate, endDate);
   }
 
   public async updateEvent(
@@ -132,11 +131,22 @@ class EventService {
     endDate: stringOrDate,
     originalEndDate: Date,
   ): Promise<Model.Event> {
-    const event = await changeEvent(eventId, originalText, text, type, startDate, endDate, originalEndDate);
-    return event;
+    const event = this.getEventById(eventId);
+    if (!event) {
+      return null;
+    }
+
+    return await this.editEvent(
+      {
+        ...event,
+        title: text,
+        eventType: type,
+      },
+      startDate,
+      endDate,
+    );
   }
 }
 
 const eventService = new EventService();
-
 export default eventService;

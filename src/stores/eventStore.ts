@@ -1,107 +1,49 @@
 import utils from '../helpers/utils';
+import {create} from 'zustand';
 
-export interface State {
+// Define the state interface
+export interface EventState {
   events: Model.Event[];
   tags: string[];
+
+  // Actions
+  setEvents: (events: Model.Event[]) => void;
+  setTags: (tags: string[]) => void;
+  insertEvent: (event: Model.Event) => void;
+  deleteEventById: (id: string) => void;
+  editEvent: (event: Model.Event) => void;
 }
 
-interface SetEventsAction {
-  type: 'SET_EVENTS';
-  payload: {
-    events: Model.Event[];
-  };
-}
-
-interface SetTagsAction {
-  type: 'SET_TAGS';
-  payload: {
-    tags: string[];
-  };
-}
-
-interface InsertEventAction {
-  type: 'INSERT_EVENT';
-  payload: {
-    event: Model.Event;
-  };
-}
-
-interface DeleteEventByIdAction {
-  type: 'DELETE_EVENT_BY_ID';
-  payload: {
-    id: string;
-  };
-}
-
-interface EditEventByIdAction {
-  type: 'EDIT_EVENT';
-  payload: Model.Event;
-}
-
-export type Actions = SetEventsAction | SetTagsAction | InsertEventAction | DeleteEventByIdAction | EditEventByIdAction;
-
-export function reducer(state: State, action: Actions): State {
-  switch (action.type) {
-    case 'SET_EVENTS': {
-      const events = utils.dedupeObjectWithId(
-        action.payload.events.sort(
-          (a, b) => utils.getTimeStampByDate(b.start) - utils.getTimeStampByDate(a.start),
-        ),
-      );
-
-      // const events = action.payload.events.sort((a, b) => utils.getTimeStampByDate(b.createdAt) - utils.getTimeStampByDate(a.createdAt));
-
-      return {
-        ...state,
-        events: [...events],
-      };
-    }
-    case 'SET_TAGS': {
-      return {
-        ...state,
-        tags: action.payload.tags,
-      };
-    }
-    case 'INSERT_EVENT': {
-      const events = utils.dedupeObjectWithId(
-        [action.payload.event, ...state.events]
-      );
-
-      return {
-        ...state,
-        events,
-      };
-    }
-    case 'DELETE_EVENT_BY_ID': {
-      return {
-        ...state,
-        events: [...state.events].filter((event) => event.id !== action.payload.id),
-      };
-    }
-    case 'EDIT_EVENT': {
-      const events = state.events.map((m) => {
-        if (m.id === action.payload.id) {
-          return {
-            ...m,
-            ...action.payload,
-          };
-        } else {
-          return m;
-        }
-      });
-
-      return {
-        ...state,
-        events,
-      };
-    }
-    default: {
-      return state;
-    }
-  }
-}
-
-export const defaultState: State = {
+// Create the store using Zustand
+const useEventStore = create<EventState>((set) => ({
+  // Initial state
   events: [],
   tags: [],
-};
+
+  // Actions
+  setEvents: (events) =>
+    set({
+      events: utils.dedupeObjectWithId(
+        events.sort((a, b) => utils.getTimeStampByDate(b.start) - utils.getTimeStampByDate(a.start)),
+      ),
+    }),
+
+  setTags: (tags) => set({tags}),
+
+  insertEvent: (event) =>
+    set((state) => ({
+      events: utils.dedupeObjectWithId([event, ...state.events]),
+    })),
+
+  deleteEventById: (id) =>
+    set((state) => ({
+      events: state.events.filter((event) => event.id !== id),
+    })),
+
+  editEvent: (updatedEvent) =>
+    set((state) => ({
+      events: state.events.map((event) => (event.id === updatedEvent.id ? {...event, ...updatedEvent} : event)),
+    })),
+}));
+
+export default useEventStore;

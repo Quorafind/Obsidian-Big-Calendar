@@ -3,7 +3,7 @@
 import {moment} from 'obsidian';
 import {TFile} from 'obsidian';
 import {createDailyNote, getAllDailyNotes, getDailyNote} from 'obsidian-daily-notes-interface';
-import appStore from '../stores/appStore';
+import useDailyNotesStore from '../stores/dailyNotesStore';
 // import dailyNotesService from './dailyNotesService';
 
 // interface FileData {
@@ -19,16 +19,12 @@ class ResourceService {
    * @returns resource: id, filename
    */
   public async upload(file: File) {
-    // const { name: filename, size } = file;
-
-    const {vault, fileManager} = appStore.getState().dailyNotesState.app;
+    const {app} = useDailyNotesStore.getState();
+    const {vault, fileManager} = app;
 
     const fileArray = await file.arrayBuffer();
     const ext = getExt(file.type);
 
-    // console.log(newOne);
-
-    // const fileName = "Paste Image " + moment().format("YYYYMMDDHHmmss");
     const dailyNotes = getAllDailyNotes();
     const date = moment();
     const existingFile = getDailyNote(date, dailyNotes);
@@ -51,9 +47,11 @@ class ResourceService {
         fileArray,
       );
     }
-    const newFilePath = fileManager.generateMarkdownLink(newFile, newFile.path, '', '');
 
-    return newFilePath;
+    return {
+      id: `Resource_${newFile.path}`,
+      filename: newFile.path,
+    };
 
     // const filePath = await vault.getAvailablePathForAttachments(fileName, "png", "");
 

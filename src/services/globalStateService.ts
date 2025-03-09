@@ -1,14 +1,9 @@
 import {storage} from '../helpers/storage';
-import appStore from '../stores/appStore';
-import {AppSetting} from '../stores/globalStateStore';
+import useGlobalStateStore, {AppSetting} from '../stores/globalStateStore';
 
 class GlobalStateService {
   constructor() {
-    const cachedSetting = storage.get([
-      'shouldSplitEventWord',
-      'shouldHideImageUrl',
-      'shouldUseMarkdownParser',
-    ]);
+    const cachedSetting = storage.get(['shouldSplitEventWord', 'shouldHideImageUrl', 'shouldUseMarkdownParser']);
     const defaultAppSetting = {
       shouldSplitEventWord: cachedSetting.shouldSplitEventWord ?? true,
       shouldHideImageUrl: cachedSetting.shouldHideImageUrl ?? true,
@@ -19,50 +14,27 @@ class GlobalStateService {
   }
 
   public getState = () => {
-    return appStore.getState().globalState;
+    return useGlobalStateStore.getState();
   };
 
   public setEditEventId = (editEventId: string) => {
-    appStore.dispatch({
-      type: 'SET_EDIT_EVENT_ID',
-      payload: {
-        editEventId,
-      },
-    });
+    useGlobalStateStore.getState().setEditEventId(editEventId);
   };
 
   public setMarkEventId = (markEventId: string) => {
-    appStore.dispatch({
-      type: 'SET_MARK_EVENT_ID',
-      payload: {
-        markEventId,
-      },
-    });
+    useGlobalStateStore.getState().setMarkEventId(markEventId);
   };
 
   public setIsMobileView = (isMobileView: boolean) => {
-    appStore.dispatch({
-      type: 'SET_MOBILE_VIEW',
-      payload: {
-        isMobileView,
-      },
-    });
+    useGlobalStateStore.getState().setMobileView(isMobileView);
   };
 
   public setShowSiderbarInMobileView = (showSiderbarInMobileView: boolean) => {
-    appStore.dispatch({
-      type: 'SET_SHOW_SIDEBAR_IN_MOBILE_VIEW',
-      payload: {
-        showSiderbarInMobileView,
-      },
-    });
+    useGlobalStateStore.getState().setShowSiderbarInMobileView(showSiderbarInMobileView);
   };
 
   public setAppSetting = (appSetting: Partial<AppSetting>) => {
-    appStore.dispatch({
-      type: 'SET_APP_SETTING',
-      payload: appSetting,
-    });
+    useGlobalStateStore.getState().setAppSetting(appSetting);
     storage.set(appSetting);
   };
 }

@@ -1,5 +1,5 @@
 // import utils from "../helpers/utils";
-import appStore from '../stores/appStore';
+import useLocationStore, {LocationState} from '../stores/locationStore';
 
 // const updateLocationUrl = (method: "replace" | "push" = "replace") => {
 //   const { query, pathname, hash } = appStore.getState().locationState;
@@ -52,147 +52,139 @@ class LocationService {
       };
     }
     state.hash = hash;
+
     state.pathname = this.getValidPathname(pathname);
-    appStore.dispatch({
-      type: 'SET_LOCATION',
-      payload: state,
-    });
+
+    useLocationStore.getState().setLocation(state);
   };
 
   public getState = () => {
-    return appStore.getState().locationState;
+    return useLocationStore.getState();
   };
 
   public clearQuery = () => {
-    appStore.dispatch({
-      type: 'SET_QUERY',
-      payload: {
-        tag: '',
-        duration: null,
-        text: '',
-        type: '',
-        filter: '',
-      },
+    const locationState = this.getState();
+    useLocationStore.getState().setQuery({
+      tag: '',
+      duration: null,
+      text: '',
+      type: '',
+      filter: '',
     });
-
-    // updateLocationUrl();
+    this.updateLocationUrl();
   };
 
   public setQuery = (query: Query) => {
-    appStore.dispatch({
-      type: 'SET_QUERY',
-      payload: query,
-    });
-
-    // updateLocationUrl();
+    useLocationStore.getState().setQuery(query);
+    this.updateLocationUrl();
   };
 
   public setHash = (hash: string) => {
-    appStore.dispatch({
-      type: 'SET_HASH',
-      payload: {
-        hash,
-      },
-    });
-
-    // updateLocationUrl();
+    useLocationStore.getState().setHash(hash);
+    this.updateLocationUrl();
   };
 
   public setPathname = (pathname: string) => {
-    appStore.dispatch({
-      type: 'SET_PATHNAME',
-      payload: {
-        pathname,
-      },
-    });
-
-    // updateLocationUrl();
+    useLocationStore.getState().setPathname(pathname);
+    this.updateLocationUrl();
   };
 
   public pushHistory = (pathname: string) => {
-    appStore.dispatch({
-      type: 'SET_PATHNAME',
-      payload: {
-        pathname,
-      },
-    });
+    const locationState = this.getState();
+    let queryString = this.transformObjectToParamsString(locationState.query);
+    if (queryString) {
+      queryString = '?' + queryString;
+    }
 
-    // updateLocationUrl("push");
+    window.history.pushState(null, '', pathname + locationState.hash + queryString);
+    this.updateStateWithLocation();
   };
 
   public replaceHistory = (pathname: string) => {
-    appStore.dispatch({
-      type: 'SET_PATHNAME',
-      payload: {
-        pathname,
-      },
-    });
+    const locationState = this.getState();
+    let queryString = this.transformObjectToParamsString(locationState.query);
+    if (queryString) {
+      queryString = '?' + queryString;
+    }
 
-    // updateLocationUrl("replace");
+    window.history.replaceState(null, '', pathname + locationState.hash + queryString);
+    this.updateStateWithLocation();
   };
 
   public setEventTypeQuery = (type: EventSpecType | '' = '') => {
-    appStore.dispatch({
-      type: 'SET_TYPE',
-      payload: {
-        type,
-      },
-    });
-
-    // updateLocationUrl();
+    useLocationStore.getState().setType(type);
+    this.updateLocationUrl();
   };
 
   public setEventFilter = (filterId: string) => {
-    appStore.dispatch({
-      type: 'SET_QUERY_FILTER',
-      payload: filterId,
-    });
-
-    // updateLocationUrl();
+    useLocationStore.getState().setQueryFilter(filterId);
+    this.updateLocationUrl();
   };
 
   public setTextQuery = (text: string) => {
-    appStore.dispatch({
-      type: 'SET_TEXT',
-      payload: {
-        text,
-      },
-    });
-
-    // updateLocationUrl();
+    useLocationStore.getState().setText(text);
+    this.updateLocationUrl();
   };
 
   public setTagQuery = (tag: string) => {
-    appStore.dispatch({
-      type: 'SET_TAG_QUERY',
-      payload: {
-        tag,
-      },
-    });
-
-    // updateLocationUrl();
+    useLocationStore.getState().setTagQuery(tag);
+    this.updateLocationUrl();
   };
 
   public setFromAndToQuery = (from: number, to: number) => {
-    appStore.dispatch({
-      type: 'SET_DURATION_QUERY',
-      payload: {
-        duration: {from, to},
-      },
-    });
-
-    // updateLocationUrl();
+    const duration = from && to ? {from, to} : null;
+    useLocationStore.getState().setDurationQuery(duration);
+    this.updateLocationUrl();
   };
 
   public getValidPathname = (pathname: string): AppRouter => {
-    if (['/', '/recycle', '/setting'].includes(pathname)) {
+    if (
+      pathname === '/' ||
+      pathname === '/explore' ||
+      pathname === '/manage' ||
+      pathname === '/event' ||
+      pathname === '/setting'
+    ) {
       return pathname as AppRouter;
-    } else {
-      return '/';
     }
+    return '/';
+  };
+
+  private updateLocationUrl = (method: 'replace' | 'push' = 'replace') => {
+    const {query, pathname, hash} = this.getState();
+    let queryString = this.transformObjectToParamsString(query);
+    if (queryString) {
+      queryString = '?' + queryString;
+    }
+
+    if (method === 'replace') {
+      window.history.replaceState(null, '', pathname + hash + queryString);
+    } else {
+      window.history.pushState(null, '', pathname + hash + queryString);
+    }
+  };
+
+  private transformObjectToParamsString = (query: Query): string => {
+    const params = new URLSearchParams();
+    if (query.tag) {
+      params.set('tag', query.tag);
+    }
+    if (query.type) {
+      params.set('type', query.type);
+    }
+    if (query.text) {
+      params.set('text', query.text);
+    }
+    if (query.filter) {
+      params.set('filter', query.filter);
+    }
+    if (query.duration) {
+      params.set('from', query.duration.from.toString());
+      params.set('to', query.duration.to.toString());
+    }
+    return params.toString();
   };
 }
 
 const locationService = new LocationService();
-
 export default locationService;
