@@ -32,7 +32,7 @@
 
 - [ ] Update dependencies to the latest versions
 - [x] Fix TypeScript errors and linting issues in `App.tsx`
-- [ ] Fix remaining TypeScript errors and linting issues
+- [x] Fix remaining TypeScript errors and linting issues
 - [x] Improve code organization and maintainability
 - [x] Add proper documentation and comments
 - [ ] Write unit tests for the refactored code
@@ -42,6 +42,14 @@
 - [x] Remove commented-out code (e.g., in `dailyNotesStore.ts`)
 - [x] Fix type definitions and ensure type safety
 - [x] Standardize naming conventions across the codebase
+
+## Component Refactoring
+
+- [x] Refactor the Calendar component:
+  - [x] Create a Zustand store for Calendar state management
+  - [x] Fix storage-related linter errors
+  - [x] Improve performance with memoization
+  - [x] Clean up unused code and comments
 
 # Obsidian Big Calendar Refactoring Plan
 
@@ -90,11 +98,11 @@
 
 ### 6. 重构 obComponents 中的文件 (Refactor obComponents Files)
 
-- [ ] 修改 `updateEvent.ts` 使用新的工具函数
-- [ ] 修改 `createEvent.ts` 使用新的工具函数
-- [ ] 修改 `deleteEvent.ts` 使用新的工具函数
-- [ ] 修改 `getEvents.ts` 使用新的工具函数
-- [ ] 修改 `parseTask.ts` 使用新的工具函数
+- [x] 修改 `updateEvent.ts` 使用新的工具函数
+- [x] 修改 `createEvent.ts` 使用新的工具函数
+- [x] 修改 `deleteEvent.ts` 使用新的工具函数
+- [x] 修改 `getEvents.ts` 使用新的工具函数
+- [x] 修改 `parseTask.ts` 使用新的工具函数
 
 ## 重构后的结构 (Post-Refactoring Structure)
 
@@ -108,9 +116,9 @@ src/
   │   ├── regexGenerators.ts   # 正则表达式生成器 ✅
   │   └── fileParser.ts        # 文件解析工具 ✅
   └── obComponents/            # 重构后的组件
-      ├── updateEvent.ts       # 使用新 API 的更新事件组件 ⏳
-      ├── createEvent.ts       # 使用新 API 的创建事件组件 ⏳
-      └── ...
+      ├── updateEvent.ts       # 使用新 API 的更新事件组件 ✅
+      ├── createEvent.ts       # 使用新 API 的创建事件组件 ✅
+      └── ...                  # 其他组件 ✅
 ```
 
 ## 优势 (Benefits)
@@ -122,14 +130,19 @@ src/
 
 ## 下一步 (Next Steps)
 
-1. 重构 `obComponents` 目录中的各个文件，使其使用新创建的 API：
+1. ✅ 重构 `obComponents` 目录中的各个文件，使其使用新创建的 API：
 
-   - 更新 `updateEvent.ts`
-   - 更新 `createEvent.ts`
-   - 更新 `deleteEvent.ts`
-   - 更新 `getEvents.ts`
-   - 更新 `parseTask.ts`
+   - ✅ 更新 `updateEvent.ts`
+   - ✅ 更新 `createEvent.ts`
+   - ✅ 更新 `deleteEvent.ts`
+   - ✅ 更新 `getEvents.ts`
+   - ✅ 更新 `parseTask.ts`
 
-2. 编写单元测试以确保重构的代码正常工作
+2. 解决重构过程中发现的 TypeScript 错误：
 
-3. 更新文档，反映新的代码结构和 API 用法
+   - 修复 `bigCalendar.ts` 中的导出问题 (`InsertAfter` 和 `DefaultEventComposition`)
+   - 修复 `appStore` 中的 `dailyNotesState` 问题
+
+3. 编写单元测试以确保重构的代码正常工作
+
+4. 更新文档，反映新的代码结构和 API 用法

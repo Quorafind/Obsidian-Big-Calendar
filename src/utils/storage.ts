@@ -23,8 +23,8 @@ type StorageKey = keyof StorageData;
  * storage helper
  */
 export namespace storage {
-  export function get(keys: StorageKey[], app: App): Partial<StorageData> {
-    const data: Partial<StorageData> = {};
+  export function get<T extends StorageData>(keys: StorageKey[], app: App): Partial<T> {
+    const data: Partial<T> = {};
 
     for (const key of keys) {
       try {

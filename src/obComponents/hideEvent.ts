@@ -1,23 +1,26 @@
 import {moment} from 'obsidian';
 import {getDailyNote} from 'obsidian-daily-notes-interface';
-import {DefaultEventComposition} from '../bigCalendar';
 // import appStore from "../stores/appStore";
 import dailyNotesService from '../services/fileService';
 // import { TFile } from "obsidian";
 import appStore from '../stores/appStore';
 import {sendEventToDelete} from './deleteEvent';
+import fileService from '../services/fileService';
+import {BigCalendarSettings} from '../setting';
+import {globalStateService} from '@/services';
 
 export async function obHideEvent(eventid: string): Promise<Model.Event> {
-  const {dailyNotes} = dailyNotesService.getState();
+  const dailyNotes = fileService.getState().files;
+  const {vault} = fileService.getState().app;
+  const settings = globalStateService.getState().pluginSetting;
   if (/\d{14,}/.test(eventid)) {
-    const {vault} = appStore.getState().dailyNotesState.app;
     const timeString = eventid.slice(0, 14);
     const idString = parseInt(eventid.slice(14));
     const changeDate = moment(timeString, 'YYYYMMDDHHmmSS');
     const dailyNote = getDailyNote(changeDate, dailyNotes);
     const fileContent = await vault.read(dailyNote);
     const fileLines = getAllLinesFromFile(fileContent);
-    const content = extractContentfromText(fileLines[idString]);
+    const content = extractContentfromText(fileLines[idString], settings);
     const originalLine = '- ' + eventid + ' ' + content;
     const newLine = fileLines[idString];
     const newFileContent = fileContent.replace(newLine, '');
@@ -28,20 +31,20 @@ export async function obHideEvent(eventid: string): Promise<Model.Event> {
 }
 
 const getAllLinesFromFile = (cache: string) => cache.split(/\r?\n/);
-const extractContentfromText = (line: string) => {
+const extractContentfromText = (line: string, settings: BigCalendarSettings) => {
   let regexMatch;
   if (
-    DefaultEventComposition != '' &&
-    /{TIME}/g.test(DefaultEventComposition) &&
-    /{CONTENT}/g.test(DefaultEventComposition)
+    settings.DefaultEventComposition != '' &&
+    /{TIME}/g.test(settings.DefaultEventComposition) &&
+    /{CONTENT}/g.test(settings.DefaultEventComposition)
   ) {
     //eslint-disable-next-line
     regexMatch =
       '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?' +
-      DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?((\\d{1,2})\\:(\\d{2}))?(\\<\\/time\\>)?').replace(
-        /{CONTENT}/g,
-        '(.*)$',
-      );
+      settings.DefaultEventComposition.replace(
+        /{TIME}/g,
+        '(\\<time\\>)?((\\d{1,2})\\:(\\d{2}))?(\\<\\/time\\>)?',
+      ).replace(/{CONTENT}/g, '(.*)$');
   } else {
     //eslint-disable-next-line
     regexMatch = '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?(\\<time\\>)?((\\d{1,2})\\:(\\d{2}))?(\\<\\/time\\>)?\\s?(.*)$';

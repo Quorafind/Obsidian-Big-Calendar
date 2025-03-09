@@ -2,6 +2,8 @@
 
 import {moment} from 'obsidian';
 import {Recurrence} from './parseTasksRecurrence';
+// Import from our new API
+import {createDueDateRegex, safeExecute} from '../api';
 
 export enum Status {
   Todo = 'Todo',
@@ -30,8 +32,8 @@ export class Task {
 
   public static readonly dateFormat = 'YYYY-MM-DD';
   public static readonly taskRegex = /^([\s\t]*)[-*] +\[(.)\] *(.*)/u;
-  // The following regexes end with `$` because they will be matched and
-  // removed from the end until none are left.
+  // Use the regex generator function for due date regex
+  // Note: Task plugin uses slightly different emoji patterns, so we'll keep the original
   public static readonly startDateRegex = /🛫 ?(\d{4}-\d{2}-\d{2})$/u;
   public static readonly scheduledDateRegex = /[⏳⌛] ?(\d{4}-\d{2}-\d{2})$/u;
   public static readonly dueDateRegex = /[📅📆🗓] ?(\d{4}-\d{2}-\d{2})$/u;

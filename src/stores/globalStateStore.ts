@@ -2,10 +2,8 @@ import {BigCalendarSettings} from 'src/setting';
 import {create} from 'zustand';
 
 export interface AppSetting {
-  shouldSplitEventWord: boolean;
   shouldHideImageUrl: boolean;
   shouldUseMarkdownParser: boolean;
-  useTinyUndoHistoryCache: boolean;
 }
 
 export interface GlobalState extends AppSetting {

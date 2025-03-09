@@ -101,3 +101,60 @@ export function createDateTimeExtractor(line: string): {
     minute: hasTime ? extractEventMinute(line) : undefined,
   };
 }
+
+/**
+ * Creates a regex for matching deleted event IDs
+ *
+ * @returns RegExp object for matching deleted event IDs
+ */
+export function createDeletedEventIdRegex(): RegExp {
+  return /^- (\d{14})(\d+)\s(.+)\s(deletedAt: )(.+)$/;
+}
+
+/**
+ * Creates a regex for matching deleted event content
+ *
+ * @returns RegExp object for matching deleted event content
+ */
+export function createDeletedEventContentRegex(): RegExp {
+  return /^- (\d+)\s(.+)\s(deletedAt: )(.+)$/;
+}
+
+/**
+ * Creates a regex for matching deleted event date
+ *
+ * @returns RegExp object for matching deleted event date
+ */
+export function createDeletedEventDateRegex(): RegExp {
+  return /^- (\d+)\s(.+)\s(deletedAt: )(.+)$/;
+}
+
+/**
+ * Extracts the ID from a deleted event line
+ *
+ * @param line The line to extract from
+ * @returns The ID or undefined if not found
+ */
+export function extractDeletedEventId(line: string): string | undefined {
+  return createDeletedEventIdRegex().exec(line)?.[1];
+}
+
+/**
+ * Extracts the content from a deleted event line
+ *
+ * @param line The line to extract from
+ * @returns The content or undefined if not found
+ */
+export function extractDeletedEventContent(line: string): string | undefined {
+  return createDeletedEventContentRegex().exec(line)?.[2];
+}
+
+/**
+ * Extracts the deletion date from a deleted event line
+ *
+ * @param line The line to extract from
+ * @returns The deletion date or undefined if not found
+ */
+export function extractDeletedEventDate(line: string): string | undefined {
+  return createDeletedEventDateRegex().exec(line)?.[4];
+}

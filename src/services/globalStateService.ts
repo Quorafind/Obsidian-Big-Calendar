@@ -1,14 +1,18 @@
 import {BigCalendarSettings} from 'src/setting';
 import {storage} from '../utils/storage';
 import useGlobalStateStore, {AppSetting} from '../stores/globalStateStore';
+import appStore from 'src/stores/appStore';
+import fileStore from 'src/stores/fileStore';
 
 class GlobalStateService {
   constructor() {
-    const cachedSetting = storage.get(['shouldSplitEventWord', 'shouldHideImageUrl', 'shouldUseMarkdownParser']);
-    const defaultAppSetting = {
-      shouldSplitEventWord: cachedSetting.shouldSplitEventWord ?? true,
-      shouldHideImageUrl: cachedSetting.shouldHideImageUrl ?? true,
-      shouldUseMarkdownParser: cachedSetting.shouldUseMarkdownParser ?? true,
+    const cachedSetting = storage.get(
+      ['shouldHideImageUrl', 'shouldUseMarkdownParser'] as Array<keyof AppSetting>,
+      fileStore.getState().app,
+    ) as Partial<AppSetting>;
+    const defaultAppSetting: AppSetting = {
+      shouldHideImageUrl: cachedSetting?.shouldHideImageUrl ?? true,
+      shouldUseMarkdownParser: cachedSetting?.shouldUseMarkdownParser ?? true,
     };
 
     this.setAppSetting(defaultAppSetting);
@@ -36,7 +40,7 @@ class GlobalStateService {
 
   public setAppSetting = (appSetting: Partial<AppSetting>) => {
     useGlobalStateStore.getState().setAppSetting(appSetting);
-    storage.set(appSetting);
+    storage.set(appSetting, fileStore.getState().app);
   };
 
   public setPluginSetting = (pluginSetting: BigCalendarSettings) => {

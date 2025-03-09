@@ -1,11 +1,35 @@
 import {moment} from 'obsidian';
 import {getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
 // import appStore from "../stores/appStore";
-import dailyNotesService from '../services/fileService';
+import fileService from '../services/fileService';
+import eventService from '../services/eventService';
 import {TFile} from 'obsidian';
 import {waitForInsert} from './createEvent';
 import {stringOrDate} from 'react-big-calendar';
+// Import from our new API instead of defining locally
+import {
+  createTimeRegex,
+  getAllLinesFromFile,
+  extractEventTime,
+  ifDueDate,
+  getDueLabel,
+  getDueDate,
+  safeExecute,
+  createDateTimeExtractor,
+} from '../api';
 
+/**
+ * Changes an existing event with new content and dates
+ *
+ * @param eventid The ID of the event to change
+ * @param originalContent The original content of the event
+ * @param content The new content for the event
+ * @param eventType The type of the event
+ * @param eventStartDate The new start date
+ * @param eventEndDate The new end date
+ * @param originalEndDate The original end date
+ * @returns Promise resolving to the updated event
+ */
 export async function changeEvent(
   eventid: string,
   originalContent: string,
@@ -15,340 +39,125 @@ export async function changeEvent(
   eventEndDate: stringOrDate,
   originalEndDate: Date,
 ): Promise<Model.Event> {
-  const {files, app} = dailyNotesService.getState();
-  const idString = parseInt(eventid.slice(14));
+  return await safeExecute(async () => {
+    const {app} = fileService.getState();
+    const files = await fileService.getAllFiles();
+    const idString = parseInt(eventid.slice(14));
 
-  const haveEndTime = /⏲\s(\d{1,2}):(\d{2})/.test(originalContent);
+    // Use our new regex function instead of inline regex
+    const haveEndTime = createTimeRegex().test(originalContent);
 
-  const startTimeString = eventid.slice(0, 13) + '00';
-  const originalStartDate = moment(startTimeString, 'YYYYMMDDHHmmSS');
-  const originalEndDateMoment = moment(originalEndDate);
+    const startTimeString = eventid.slice(0, 13) + '00';
+    const originalStartDate = moment(startTimeString, 'YYYYMMDDHHmmSS');
+    const originalEndDateMoment = moment(originalEndDate);
 
-  const dailyNote = getDailyNote(originalStartDate, files);
-  const fileContent = await app.vault.read(dailyNote);
-  const fileLines = getAllLinesFromFile(fileContent);
+    const dailyNote = getDailyNote(originalStartDate, files);
+    if (!dailyNote) {
+      throw new Error(`Daily note not found for date: ${originalStartDate.format('YYYY-MM-DD')}`);
+    }
 
-  const removeCRLF = content.replace(/\n/g, '<br>');
-  const eventStartMoment = moment(eventStartDate);
-  const eventEndMoment = moment(eventEndDate);
+    const fileContent = await app.vault.read(dailyNote);
+    const fileLines = getAllLinesFromFile(fileContent);
 
-  if (haveEndTime) {
-    const eventEndHour = extractEventEndHourFromLine(originalContent);
-    const eventEndMin = extractEventEndMinFromLine(originalContent);
+    const eventStartMoment = moment(eventStartDate);
+    const eventEndMoment = moment(eventEndDate);
 
-    //TODO: Fix this
-    const endTimeString = eventid.slice(0, 9) + eventEndHour + eventEndMin + '00';
-    const originalEndDate = moment(endTimeString, 'YYYYMMDDHHmmSS');
+    // Find the line with the event
+    let lineIndex = -1;
+    let originalLine = '';
 
-    if (eventStartMoment.isSame(originalStartDate, 'day')) {
-      if (
-        eventStartMoment.isSame(originalStartDate, 'hour') &&
-        eventStartMoment.isSame(originalStartDate, 'minute') &&
-        eventEndMoment.isSame(originalEndDate, 'hour') &&
-        eventEndMoment.isSame(originalEndDate, 'minute')
-      ) {
-        return;
-      } else {
-        const newEventId = eventStartMoment.format('YYYYMMDDHHmmSS') + idString;
-        let newLine = fileLines[idString].replace(
-          originalContent,
-          '- [ ] ' + eventStartMoment.format('HH:mm') + ' ' + removeCRLF,
-        );
-        if (eventStartMoment.isBefore(eventEndMoment)) {
-          if (/\^\S{6}$/.test(newLine)) {
-            let endDate = '';
-            let dueLabel = '📅';
-            if (ifDueDate(newLine)) {
-              dueLabel = getDueLabel(newLine);
-              endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD');
-              const dueDate = getDueDate(newLine);
-              newLine = newLine.replace(dueDate, endDate);
-            } else {
-              if (
-                eventEndMoment.diff(eventStartMoment, 'days') > 0 ||
-                eventEndMoment.format('DD') !== eventStartMoment.format('DD')
-              ) {
-                if (newLine[newLine.length - 1] === ' ') {
-                  endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                } else {
-                  endDate = ' ' + dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                }
-              }
-              if (
-                eventEndMoment.diff(eventStartMoment, 'minutes') == 30 &&
-                eventEndMoment.diff(eventStartMoment, 'hours') == 0 &&
-                eventEndMoment.diff(eventStartMoment, 'days') == 0
-              ) {
-                newLine = newLine.slice(newLine.length - 7) + endDate + newLine.slice(-7);
-              } else {
-                if (newLine[newLine.length - 1] === ' ') {
-                  newLine =
-                    newLine.slice(newLine.length - 7) +
-                    endDate +
-                    '⏲ ' +
-                    eventEndMoment.format('HH:mm') +
-                    newLine.slice(-7);
-                } else {
-                  newLine =
-                    newLine.slice(newLine.length - 7) +
-                    endDate +
-                    ' ⏲ ' +
-                    eventEndMoment.format('HH:mm') +
-                    newLine.slice(-7);
-                  // newLine = newLine.replace(/⏲\s(\d{1,2}):(\d{2})/, '⏲ ' + eventEndMoment.format('HH:mm'));
-                }
-              }
-            }
-          } else {
-            let endDate = '';
-            let dueLabel = '📅';
-            if (ifDueDate(newLine)) {
-              dueLabel = getDueLabel(newLine);
-              endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD');
-              const dueDate = getDueDate(newLine);
-              newLine = newLine.replace(dueDate, endDate);
-            } else {
-              if (
-                eventEndMoment.diff(eventStartMoment, 'days') > 0 ||
-                eventEndMoment.format('DD') !== eventStartMoment.format('DD')
-              ) {
-                if (newLine[newLine.length - 1] === ' ') {
-                  endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                } else {
-                  endDate = ' ' + dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                }
-              }
-              if (
-                eventEndMoment.diff(eventStartMoment, 'minutes') == 30 &&
-                eventEndMoment.diff(eventStartMoment, 'hours') == 0 &&
-                eventEndMoment.diff(eventStartMoment, 'days') == 0
-              ) {
-                newLine = newLine + endDate;
-              } else {
-                if (newLine[newLine.length - 1] === ' ') {
-                  newLine = newLine + endDate + '⏲ ' + eventEndMoment.format('HH:mm');
-                } else {
-                  newLine = newLine + endDate + ' ⏲ ' + eventEndMoment.format('HH:mm');
-                }
-                // newLine = newLine.replace(/⏲\s(\d{1,2}):(\d{2})/, '⏲ ' + eventEndMoment.format('HH:mm'));
-              }
-            }
+    for (let i = 0; i < fileLines.length; i++) {
+      const line = fileLines[i];
+      if (line.includes(originalContent) || (line.startsWith('- ') && createTimeRegex().test(line))) {
+        const timeInfo = extractEventTime(line);
+        if (timeInfo) {
+          const {hour, minute} = timeInfo;
+          const lineTime = moment(originalStartDate).set({hour, minute});
+
+          if (lineTime.format('YYYYMMDDHHmm') === eventid.slice(0, 12)) {
+            lineIndex = i;
+            originalLine = line;
+            break;
           }
         }
-        // .replace(/⏲️ (\d{1,2})\:(\d{2})/, '⏲️ ' + eventEndHour + ':' + eventEndMin);
-
-        const newFileContent = fileContent.replace(fileLines[idString], newLine);
-        await app.vault.modify(dailyNote, newFileContent);
-        return {
-          id: newEventId,
-          title: removeCRLF,
-          originalContent: newLine,
-          start: eventStartMoment.toDate(),
-          end: eventEndMoment.toDate(),
-          eventType: eventType,
-          allDay: false,
-        };
-      }
-    } else {
-      // const newEventId = moment(eventDate).format('YYYYMMDDHHmmSS') + idString;
-      if (eventStartMoment.format('HH:mm') === '00:00' && eventEndMoment.format('HH:mm') === '00:00') {
-        // const newLine = fileLines[idString].replace(originalContent, '- [ ] ' + moment(originalDate).format('HH:mm') + ' ' + removeEnter);
-        // const eventStartHour = eventStartMoment.format('HH');
-        // const eventStartMin = eventStartMoment.format('mm');
-        // const startEventDate = eventStartMoment.hour(parseInt(eventStartHour)).minute(parseInt(eventStartMin)).toDate();
-        const replaceFileContent = fileContent.replace(fileLines[idString], '');
-        await app.vault.modify(dailyNote, replaceFileContent);
-        return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
-      } else {
-        // const newLine = fileLines[idString].replace(originalContent, '- [ ] ' + moment(eventDate).format('HH:mm') + ' ' + removeEnter);
-        const newFileContent = fileContent.replace(fileLines[idString], '');
-        await app.vault.modify(dailyNote, newFileContent);
-        return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
-        // return {
-        //   id: newEventId,
-        //   title: removeEnter,
-        //   start: moment(eventDate).toDate(),
-        //   end: moment(eventDate).toDate(),
-        //   eventType: eventType,
-        // };
       }
     }
-  } else {
-    if (eventStartMoment.isSame(originalStartDate, 'day')) {
-      if (
-        eventStartMoment.isSame(originalStartDate, 'hour') &&
-        eventStartMoment.isSame(originalStartDate, 'minute') &&
-        eventEndMoment.isSame(originalEndDateMoment) &&
-        eventEndMoment.diff(eventStartMoment, 'minutes') == 30 &&
-        eventEndMoment.diff(eventStartMoment, 'hours') == 0 &&
-        eventEndMoment.diff(eventStartMoment, 'days') == 0
-      ) {
-        return;
-      } else {
-        const newEventId = eventStartMoment.format('YYYYMMDDHHmmSS') + idString;
-        let newLine = fileLines[idString].replace(
-          originalContent,
-          '- [ ] ' + eventStartMoment.format('HH:mm') + ' ' + removeCRLF,
-        );
-        if (eventStartMoment.isBefore(eventEndMoment)) {
-          if (/\^\S{6}$/.test(newLine)) {
-            let endDate = '';
-            let dueLabel = '📅';
-            if (ifDueDate(newLine)) {
-              dueLabel = getDueLabel(newLine);
-              endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD');
-              const dueDate = getDueDate(newLine);
-              newLine = newLine.replace(dueDate, endDate);
-            } else {
-              if (
-                eventEndMoment.diff(eventStartMoment, 'days') > 0 ||
-                eventEndMoment.format('DD') !== eventStartMoment.format('DD')
-              ) {
-                if (newLine[newLine.length - 1] === ' ') {
-                  endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                } else {
-                  endDate = ' ' + dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                }
-              }
-              if (
-                eventEndMoment.diff(eventStartMoment, 'minutes') == 30 &&
-                eventEndMoment.diff(eventStartMoment, 'hours') == 0 &&
-                eventEndMoment.diff(eventStartMoment, 'days') == 0
-              ) {
-                newLine = newLine.slice(newLine.length - 7) + endDate + newLine.slice(-7);
-              } else {
-                if (newLine[newLine.length - 1] === ' ') {
-                  newLine =
-                    newLine.slice(newLine.length - 7) +
-                    endDate +
-                    '⏲ ' +
-                    eventEndMoment.format('HH:mm') +
-                    newLine.slice(-7);
-                } else {
-                  newLine =
-                    newLine.slice(newLine.length - 7) +
-                    endDate +
-                    ' ⏲ ' +
-                    eventEndMoment.format('HH:mm') +
-                    newLine.slice(-7);
-                }
-              }
-            }
-          } else {
-            let endDate = '';
-            let dueLabel = '📅';
-            if (ifDueDate(newLine)) {
-              dueLabel = getDueLabel(newLine);
-              endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD');
-              const dueDate = getDueDate(newLine);
-              newLine = newLine.replace(dueDate, endDate);
-            } else {
-              if (
-                eventEndMoment.diff(eventStartMoment, 'days') > 0 ||
-                eventEndMoment.format('DD') !== eventStartMoment.format('DD')
-              ) {
-                if (newLine[newLine.length - 1] === ' ') {
-                  endDate = dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                } else {
-                  endDate = ' ' + dueLabel + ' ' + eventEndMoment.format('YYYY-MM-DD') + ' ';
-                }
-              }
-              if (
-                eventEndMoment.diff(eventStartMoment, 'minutes') == 30 &&
-                eventEndMoment.diff(eventStartMoment, 'hours') == 0 &&
-                eventEndMoment.diff(eventStartMoment, 'days') == 0
-              ) {
-                newLine = newLine + endDate;
-              } else {
-                if (newLine[newLine.length - 1] === ' ') {
-                  newLine = newLine + endDate + '⏲ ' + eventEndMoment.format('HH:mm');
-                } else {
-                  newLine = newLine + endDate + ' ⏲ ' + eventEndMoment.format('HH:mm');
-                }
-              }
-            }
-          }
-        }
-        const newFileContent = fileContent.replace(fileLines[idString], newLine);
-        await app.vault.modify(dailyNote, newFileContent);
-        return {
-          id: newEventId,
-          title: removeCRLF,
-          originalContent: newLine,
-          start: eventStartMoment.toDate(),
-          end: eventEndMoment.toDate(),
-          eventType: eventType,
-          allDay: false,
-        };
-      }
-    } else {
-      // const newEventId = moment(eventDate).format('YYYYMMDDHHmmSS') + idString;
-      if (eventStartMoment.format('HH:mm') === '00:00' && eventEndMoment.format('HH:mm') === '00:00') {
-        // const newLine = fileLines[idString].replace(originalContent, '- [ ] ' + moment(originalDate).format('HH:mm') + ' ' + removeEnter);
-        // const eventStartHour = eventStartMoment.format('HH');
-        // const eventStartMin = eventStartMoment.format('mm');
 
-        // const startEventDate = eventStartMoment.toDate();
-        // const endEventDate = eventEndMoment.toDate();
-
-        const replaceFileContent = fileContent.replace(fileLines[idString], '');
-        await app.vault.modify(dailyNote, replaceFileContent);
-        return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
-      } else {
-        // const newLine = fileLines[idString].replace(originalContent, '- [ ] ' + moment(eventDate).format('HH:mm') + ' ' + removeEnter);
-        const newFileContent = fileContent.replace(fileLines[idString], '');
-        await app.vault.modify(dailyNote, newFileContent);
-        return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
-        // return {
-        //   id: newEventId,
-        //   title: removeEnter,
-        //   start: moment(eventDate).toDate(),
-        //   end: moment(eventDate).toDate(),
-        //   eventType: eventType,
-        // };
-      }
+    if (lineIndex === -1) {
+      // If we can't find the event in the original file, create a new one
+      return await waitForInsert(content, eventStartDate, eventEndDate);
     }
-  }
+
+    // Format the new event line
+    const timeHour = eventStartMoment.format('HH');
+    const timeMinute = eventStartMoment.format('mm');
+    let newLine = `- ${timeHour}:${timeMinute} ${content}`;
+
+    // Add end time if needed
+    if (eventEndMoment.isAfter(eventStartMoment)) {
+      if (eventEndMoment.diff(eventStartMoment, 'days') > 0) {
+        // Multi-day event
+        newLine += ` 📅 ${eventEndMoment.format('YYYY-MM-DD')}`;
+      }
+
+      // Add end time
+      newLine += ` ⏲ ${eventEndMoment.format('HH:mm')}`;
+    }
+
+    // Update the file
+    fileLines[lineIndex] = newLine;
+    const newFileContent = fileLines.join('\n');
+    await app.vault.modify(dailyNote, newFileContent);
+
+    // Return the updated event
+    return {
+      id: eventid,
+      title: content,
+      start: eventStartMoment.toDate(),
+      end: eventEndMoment.toDate(),
+      allDay: false,
+      eventType: eventType || 'default',
+    };
+  }, 'Failed to update event');
 }
 
+/**
+ * Gets the file associated with an event
+ *
+ * @param eventid The ID of the event
+ * @returns The file containing the event
+ */
 export function getFile(eventid: string): TFile {
-  const {files} = dailyNotesService.getState();
-  const timeString = eventid.slice(0, 14);
-  const changeDate = moment(timeString, 'YYYYMMDDHHmmss');
-  const dailyNote = getDailyNote(changeDate, files);
-  return dailyNote;
+  return fileService.getFile(eventid);
 }
 
+/**
+ * Gets the path to the daily notes folder
+ *
+ * @returns The path to the daily notes folder
+ */
 export function getDailyNotePath(): string {
-  const dailyNotesSetting = getDailyNoteSettings();
-  const dailyNotePath = dailyNotesSetting.folder;
-  return dailyNotePath;
+  return fileService.getDailyNotePath();
 }
 
-const getAllLinesFromFile = (cache: string) => cache.split(/\r?\n/);
+/**
+ * Extracts the end hour from a line
+ *
+ * @param line The line to extract from
+ * @returns The end hour or 0 if not found
+ */
+export function extractEventEndHourFromLine(line: string): number {
+  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  return match ? parseInt(match[1]) : 0;
+}
 
-const extractEventEndHourFromLine = (line: string): number => {
-  let regexMatch;
-  //eslint-disable-next-line
-  regexMatch = '⏲s(\\d{1,2})\\:(\\d{2})';
-
-  const regexMatchRe = new RegExp(regexMatch, '');
-  //eslint-disable-next-line
-  return parseInt(regexMatchRe.exec(line)?.[1]);
-};
-
-const extractEventEndMinFromLine = (line: string): number => {
-  let regexMatch;
-  //eslint-disable-next-line
-  regexMatch = '⏲s(\\d{1,2})\\:(\\d{2})';
-
-  const regexMatchRe = new RegExp(regexMatch, '');
-  //eslint-disable-next-line
-  return parseInt(regexMatchRe.exec(line)?.[2]);
-};
-//eslint-disable-next-line
-const ifDueDate = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:))\s?(\d{4}-\d{2}-\d{2})(\])?/.test(line);
-//eslint-disable-next-line
-const getDueLabel = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:))\s?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[1];
-//eslint-disable-next-line
-const getDueDate = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:))\s?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[0];
+/**
+ * Extracts the end minute from a line
+ *
+ * @param line The line to extract from
+ * @returns The end minute or 0 if not found
+ */
+export function extractEventEndMinFromLine(line: string): number {
+  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  return match ? parseInt(match[2]) : 0;
+}

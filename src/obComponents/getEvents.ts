@@ -1,483 +1,287 @@
 import {normalizePath, TFolder, TFile, moment} from 'obsidian';
 import {getAllDailyNotes, getDailyNoteSettings, getDateFromFile} from 'obsidian-daily-notes-interface';
-import appStore from '../stores/appStore';
-import {ProcessEntriesBelow} from '../bigCalendar';
-import {DefaultEventComposition} from '../bigCalendar';
-// import {eventService} from '../services';
-// import appContext from '../stores/appContext';
-// import {useContext} from 'react';
+import {getAllLinesFromFile, extractEventTime, safeExecute} from '../api';
+import fileService from '@/services/fileService';
+import globalStateService from '@/services/globalStateService';
+import {BigCalendarSettings} from '@/setting';
 
 export class DailyNotesFolderMissingError extends Error {}
 
 export async function getRemainingEvents(note: TFile): Promise<number> {
-  if (!note) {
-    return 0;
-  }
-  const {vault} = appStore.getState().dailyNotesState.app;
-  let fileContents = await vault.read(note);
-  let regexMatch;
-  if (
-    DefaultEventComposition != '' &&
-    /{TIME}/g.test(DefaultEventComposition) &&
-    /{CONTENT}/g.test(DefaultEventComposition)
-  ) {
-    //eslint-disable-next-line
-    regexMatch =
-      '(-|\\*) (\\[(.{1})\\]\\s)?' +
-      DefaultEventComposition.replace(/{TIME}/g, '((\\<time\\>)?\\d{1,2}:\\d{2})?').replace(/ {CONTENT}/g, '');
-  } else {
-    //eslint-disable-next-line
-    regexMatch = '(-|\\*) (\\[(.{1})\\]\\s)?((\\<time\\>)?\\d{1,2}\\:\\d{2})?';
-  }
-  const regexMatchRe = new RegExp(regexMatch, 'g');
-  //eslint-disable-next-line
-  const matchLength = (fileContents.match(regexMatchRe) || []).length;
-  // const matchLength = (fileContents.match(/(-|\*) (\[ \]\s)?((\<time\>)?\d{1,2}\:\d{2})?/g) || []).length;
-  const re = new RegExp(ProcessEntriesBelow.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1'), 'g');
-  const processEntriesHeader = (fileContents.match(re) || []).length;
-  fileContents = null;
-  if (processEntriesHeader) {
-    return matchLength;
-  }
-  return 0;
+  return await safeExecute(async () => {
+    if (!note) {
+      return 0;
+    }
+    const {vault} = fileService.getState().app;
+    const settings = globalStateService.getState().pluginSetting;
+    const fileContents = await vault.read(note);
+
+    // 创建匹配事件的正则表达式
+    let regexPattern;
+    if (
+      settings.DefaultEventComposition !== '' &&
+      /{TIME}/g.test(settings.DefaultEventComposition) &&
+      /{CONTENT}/g.test(settings.DefaultEventComposition)
+    ) {
+      regexPattern =
+        '(-|\\*) (\\[(.{1})\\]\\s)?' +
+        settings.DefaultEventComposition.replace(/{TIME}/g, '((\\<time\\>)?\\d{1,2}:\\d{2})?').replace(
+          / {CONTENT}/g,
+          '',
+        );
+    } else {
+      regexPattern = '(-|\\*) (\\[(.{1})\\]\\s)?((\\<time\\>)?\\d{1,2}\\:\\d{2})?';
+    }
+
+    const regexMatcher = new RegExp(regexPattern, 'g');
+    const matchCount = (fileContents.match(regexMatcher) || []).length;
+
+    // 检查是否有处理条目的标记
+    const processEntriesPattern = new RegExp(
+      settings.ProcessEntriesBelow.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1'),
+      'g',
+    );
+    const hasProcessEntriesHeader = (fileContents.match(processEntriesPattern) || []).length > 0;
+
+    return hasProcessEntriesHeader ? matchCount : 0;
+  }, 'Failed to get remaining events');
 }
-
 export async function getEventsFromDailyNote(dailyNote: TFile | null, dailyEvents: any[]): Promise<Model.Event[]> {
-  if (!dailyNote) {
-    return [];
-  }
-  const {vault} = appStore.getState().dailyNotesState.app;
-  const Events = await getRemainingEvents(dailyNote);
+  return await safeExecute(async () => {
+    if (!dailyNote) {
+      return [];
+    }
+    const {vault} = fileService.getState().app;
+    const settings = globalStateService.getState().pluginSetting;
+    const events = await getRemainingEvents(dailyNote);
 
-  if (Events) {
-    let fileContents = await vault.read(dailyNote);
-    let fileLines = getAllLinesFromFile(fileContents);
+    if (!events) {
+      return [];
+    }
+
+    const fileContents = await vault.read(dailyNote);
+    const fileLines = getAllLinesFromFile(fileContents);
     const startDate = getDateFromFile(dailyNote, 'day');
     const endDate = getDateFromFile(dailyNote, 'day');
 
     let processHeaderFound = false;
     let eventType: string;
+    const result: Model.Event[] = [];
 
+    // 遍历文件的每一行
     for (let i = 0; i < fileLines.length; i++) {
       const line = fileLines[i];
       if (line.length === 0) continue;
-      if (processHeaderFound == false && lineContainsParseBelowToken(line)) {
+
+      // 检查是否找到处理条目的标记
+      if (!processHeaderFound && lineContainsParseBelowToken(line, settings)) {
         processHeaderFound = true;
       }
-      if (processHeaderFound == true && !lineContainsParseBelowToken(line) && /^#{1,} /g.test(line)) {
+
+      // 如果找到新的标题，停止处理
+      if (processHeaderFound && !lineContainsParseBelowToken(line, settings) && /^#{1,} /g.test(line)) {
         processHeaderFound = false;
       }
 
-      if (lineContainsTime(line) && processHeaderFound) {
-        const startHourText = extractHourFromBulletLine(line);
-        const startMinText = extractMinFromBulletLine(line);
-        let newEndDate = endDate;
-        let endMinText: number;
-        let endHourText: number;
-        // let endDayText: number;
-        // let endMonthText: number;
-        // let endYearText: number;
+      // 处理包含时间的行
+      if (lineContainsTime(line, settings) && processHeaderFound) {
+        const timeInfo = extractEventTime(line);
+        if (!timeInfo) continue;
 
-        //eslint-disable-next-line
-        const haveEndTime = /⏲\s(\d{1,2})\:(\d{2})/.test(line);
-        //eslint-disable-next-line
-        const haveEndDate = /\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/.test(line);
+        const {hour, minute} = timeInfo;
+        let eventEndDate = new Date(endDate);
+        let eventEndHour = hour;
+        let eventEndMinute = minute;
 
-        if (haveEndTime) {
-          endMinText = extractEventEndMinFromLine(line);
-          endHourText = extractEventEndHourFromLine(line);
-          newEndDate.hours(endHourText);
-          newEndDate.minutes(endMinText);
-          if (haveEndDate) {
-            const newMoment = moment(getDueDate(line), 'YYYY-MM-DD');
-            newEndDate = newMoment;
-            newEndDate.hours(endHourText);
-            newEndDate.minutes(endMinText);
-            // endDayText = parseInt(newMoment.format('DD'));
-            // endMonthText = parseInt(newMoment.format('MM'));
-            // endYearText = parseInt(newMoment.format('YYYY'));
-            // newEndDate.date(endDayText);
-            // newEndDate.month(endMonthText);
-            // newEndDate.year(endYearText);
-          }
+        // 检查是否有结束时间
+        const hasEndTime = /⏲\s?(\d{1,2})\:(\d{2})/.test(line);
+        if (hasEndTime) {
+          eventEndHour = extractEventEndHourFromLine(line);
+          eventEndMinute = extractEventEndMinFromLine(line);
         } else {
-          newEndDate.hours(parseInt(startHourText));
-          if (parseInt(startMinText) > 29 && parseInt(startMinText) < 60 && parseInt(startHourText) > 23) {
-            newEndDate.minutes(59);
-          } else {
-            newEndDate.minutes(parseInt(startMinText) + 30);
+          // 默认事件持续30分钟
+          eventEndMinute = (minute + 30) % 60;
+          if (minute + 30 >= 60) {
+            eventEndHour = (hour + 1) % 24;
           }
-          if (haveEndDate) {
-            const newMoment = moment(getDueDate(line), 'YYYY-MM-DD');
-            newEndDate = newMoment;
-            newEndDate.hours(parseInt(startHourText));
-            newEndDate.minutes(parseInt(startMinText));
-          }
-          // if (parseInt(startHourText) > 22) {
-          //   newEndDate.minutes(parseInt(startMinText));
-          // } else {
-          //   newEndDate.minutes(parseInt(startMinText));
-          // }
         }
 
-        startDate.hours(parseInt(startHourText));
-        startDate.minutes(parseInt(startMinText));
+        // 设置开始和结束时间
+        const eventStartDate = new Date(startDate);
+        eventStartDate.setHours(hour, minute, 0, 0);
 
-        if (newEndDate.isSame(startDate)) {
-          newEndDate.minutes(parseInt(startMinText) + 30);
-        }
-        //eslint-disable-next-line
-        if (/^\s*[-*]\s(\[(.{1})\])\s/g.test(line)) {
-          const eventTaskType = extractEventTaskTypeFromLine(line);
-          if (eventTaskType === ' ') {
-            eventType = 'TASK-TODO';
-          } else if (eventTaskType === 'x' || eventTaskType === 'X') {
-            eventType = 'TASK-DONE';
-          } else {
-            eventType = 'TASK-' + eventTaskType;
-          }
+        // 使用 getDueDate 获取实际的结束日期
+        const dueDateStr = getDueDate(line);
+        if (dueDateStr) {
+          const dueDate = new Date(dueDateStr);
+          eventEndDate = dueDate;
         } else {
-          eventType = 'JOURNAL';
+          eventEndDate.setHours(eventEndHour, eventEndMinute, 0, 0);
         }
 
-        let rawText = extractTextFromTodoLine(line);
+        // 提取事件内容和类型
+        const eventContent = extractTextFromTodoLine(line, settings);
+        const taskType = extractEventTaskTypeFromLine(line);
 
-        if (haveEndTime) {
-          //eslint-disable-next-line
-          rawText = rawText.replace(/⏲\s(\d{1,2})\:(\d{2})/, '');
+        // 根据任务类型设置事件类型
+        if (taskType === ' ') {
+          eventType = 'TASK-TODO';
+        } else if (taskType === 'x' || taskType === 'X') {
+          eventType = 'TASK-DONE';
+        } else if (taskType === '-') {
+          eventType = 'TASK-CANCELLED';
+        } else if (taskType === '>') {
+          eventType = 'TASK-FORWARDED';
+        } else if (taskType === 'D') {
+          eventType = 'TASK-DEFERRED';
+        } else if (taskType === '?') {
+          eventType = 'TASK-QUESTION';
+        } else if (taskType === '/') {
+          eventType = 'TASK-IN_PROGRESS';
+        } else if (taskType === '+') {
+          eventType = 'TASK-ADD';
+        } else if (taskType === 'R') {
+          eventType = 'TASK-REVIEWED';
+        } else if (taskType === '!') {
+          eventType = 'TASK-IMPORTANT';
+        } else if (taskType === 'i') {
+          eventType = 'TASK-INFO';
+        } else if (taskType === 'B') {
+          eventType = 'TASK-BOOKMARK';
+        } else if (taskType === 'P') {
+          eventType = 'TASK-PRO';
+        } else if (taskType === 'C') {
+          eventType = 'TASK-CON';
+        } else if (taskType === 'b') {
+          eventType = 'TASK-BRAINSTORMING';
+        } else if (taskType === 'E') {
+          eventType = 'TASK-EXAMPLE';
+        } else if (taskType === 'Q') {
+          eventType = 'TASK-QUOTE';
+        } else if (taskType === 'N') {
+          eventType = 'TASK-NOTE';
+        } else if (taskType === 'W') {
+          eventType = 'TASK-WIN';
+        } else if (taskType === 'L') {
+          eventType = 'TASK-LOSE';
+        } else {
+          eventType = 'default';
         }
 
-        if (haveEndDate) {
-          //eslint-disable-next-line
-          rawText = rawText.replace(/\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/, '');
-        }
+        // 创建事件对象
+        const event: Model.Event = {
+          id: startDate.format('YYYYMMDDHHmm') + '00' + (i + 1),
+          title: eventContent || '',
+          start: eventStartDate,
+          end: eventEndDate,
+          allDay: false,
+          eventType: eventType,
+        };
 
-        if (rawText !== '') {
-          if (newEndDate.isBefore(startDate)) {
-            dailyEvents.push({
-              id: startDate.format('YYYYMMDDHHmm') + '00' + i,
-              title: rawText,
-              originalContent: line,
-              start: startDate.toDate(),
-              end: startDate.toDate(),
-              eventType: eventType,
-              allDay: false,
-            });
-          } else {
-            dailyEvents.push({
-              id: startDate.format('YYYYMMDDHHmm') + '00' + i,
-              title: rawText,
-              originalContent: line,
-              start: startDate.toDate(),
-              end: newEndDate.toDate(),
-              eventType: eventType,
-              allDay: false,
-            });
-          }
+        // 添加到结果数组
+        result.push(event);
+        if (dailyEvents) {
+          dailyEvents.push(event);
         }
       }
     }
-    fileLines = null;
-    fileContents = null;
-  }
+
+    return result;
+  }, 'Failed to get events from daily note');
 }
 
 export async function getEvents(): Promise<any[]> {
-  const events: any[] | PromiseLike<any[]> = [];
-  const {vault} = appStore.getState().dailyNotesState.app;
-  const {folder} = getDailyNoteSettings();
+  return await safeExecute(async () => {
+    const events: any[] = [];
+    const {vault} = fileService.getState().app;
+    const {folder} = getDailyNoteSettings();
 
-  const dailyNotesFolder = vault.getAbstractFileByPath(normalizePath(folder)) as TFolder;
-
-  if (!dailyNotesFolder) {
-    throw new DailyNotesFolderMissingError('Failed to find daily notes folder');
-  }
-
-  const dailyNotes = getAllDailyNotes();
-
-  for (const string in dailyNotes) {
-    if (dailyNotes[string] instanceof TFile) {
-      await getEventsFromDailyNote(dailyNotes[string], events);
+    // 获取日记笔记文件夹
+    const dailyNotesFolder = vault.getFolderByPath(normalizePath(folder)) as TFolder;
+    if (!dailyNotesFolder) {
+      throw new DailyNotesFolderMissingError('Failed to find daily notes folder');
     }
-  }
 
-  return events;
+    // 获取所有日记笔记
+    const dailyNotes = getAllDailyNotes();
+
+    // 从每个日记笔记中获取事件
+    for (const key in dailyNotes) {
+      if (dailyNotes[key] instanceof TFile) {
+        await getEventsFromDailyNote(dailyNotes[key], events);
+      }
+    }
+
+    return events;
+  }, 'Failed to get events');
 }
 
-// export async function pushNewEvents(file: TFile): Promise<void> {
-//   const {vault} = appStore.getState().dailyNotesState.app;
-//   const events = eventService.getState().events;
-//   const remainEventsNum = await getRemainingEvents(file);
+const lineContainsTime = (line: string, settings: BigCalendarSettings): boolean => {
+  let regexPattern;
 
-//   if (remainEventsNum) {
-//     let fileContents = await vault.read(file);
-//     let fileLines = getAllLinesFromFile(fileContents);
-//     const startDate = getDateFromFile(file, 'day');
-//     const endDate = getDateFromFile(file, 'day');
-
-//     let processHeaderFound = false;
-//     let eventType: string;
-
-//     for (let i = 0; i < fileLines.length; i++) {
-//       const line = fileLines[i];
-//       if (line.length === 0) continue;
-//       if (processHeaderFound == false && lineContainsParseBelowToken(line)) {
-//         processHeaderFound = true;
-//       }
-//       if (processHeaderFound == true && !lineContainsParseBelowToken(line) && /^#{1,} /g.test(line)) {
-//         processHeaderFound = false;
-//       }
-
-//       if (lineContainsTime(line) && processHeaderFound) {
-//         const startHourText = extractHourFromBulletLine(line);
-//         const startMinText = extractMinFromBulletLine(line);
-//         let newEndDate = endDate;
-//         let endMinText: number;
-//         let endHourText: number;
-//         // let endDayText: number;
-//         // let endMonthText: number;
-//         // let endYearText: number;
-
-//         //eslint-disable-next-line
-//         const haveEndTime = /⏲\s(\d{1,2})\:(\d{2})/.test(line);
-//         //eslint-disable-next-line
-//         const haveEndDate = /\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/.test(line);
-
-//         if (haveEndTime) {
-//           endMinText = extractEventEndMinFromLine(line);
-//           endHourText = extractEventEndHourFromLine(line);
-//           newEndDate.hours(endHourText);
-//           newEndDate.minutes(endMinText);
-//           if (haveEndDate) {
-//             const newMoment = moment(getDueDate(line), 'YYYY-MM-DD');
-//             newEndDate = newMoment;
-//             newEndDate.hours(endHourText);
-//             newEndDate.minutes(endMinText);
-//             // endDayText = parseInt(newMoment.format('DD'));
-//             // endMonthText = parseInt(newMoment.format('MM'));
-//             // endYearText = parseInt(newMoment.format('YYYY'));
-//             // newEndDate.date(endDayText);
-//             // newEndDate.month(endMonthText);
-//             // newEndDate.year(endYearText);
-//           }
-//         } else {
-//           newEndDate.hours(parseInt(startHourText));
-//           if (parseInt(startMinText) > 29 && parseInt(startMinText) < 60 && parseInt(startHourText) > 23) {
-//             newEndDate.minutes(59);
-//           } else {
-//             newEndDate.minutes(parseInt(startMinText) + 30);
-//           }
-//           if (haveEndDate) {
-//             const newMoment = moment(getDueDate(line), 'YYYY-MM-DD');
-//             newEndDate = newMoment;
-//             newEndDate.hours(parseInt(startHourText));
-//             newEndDate.minutes(parseInt(startMinText));
-//           }
-//           // if (parseInt(startHourText) > 22) {
-//           //   newEndDate.minutes(parseInt(startMinText));
-//           // } else {
-//           //   newEndDate.minutes(parseInt(startMinText));
-//           // }
-//         }
-
-//         startDate.hours(parseInt(startHourText));
-//         startDate.minutes(parseInt(startMinText));
-
-//         if (newEndDate.isSame(startDate)) {
-//           newEndDate.minutes(parseInt(startMinText) + 30);
-//         }
-//         //eslint-disable-next-line
-//         if (/^\s*[-*]\s(\[(.{1})\])\s/g.test(line)) {
-//           const eventTaskType = extractEventTaskTypeFromLine(line);
-//           if (eventTaskType === ' ') {
-//             eventType = 'TASK-TODO';
-//           } else if (eventTaskType === 'x' || eventTaskType === 'X') {
-//             eventType = 'TASK-DONE';
-//           } else {
-//             eventType = 'TASK-' + eventTaskType;
-//           }
-//         } else {
-//           eventType = 'JOURNAL';
-//         }
-
-//         let rawText = extractTextFromTodoLine(line);
-
-//         if (haveEndTime) {
-//           //eslint-disable-next-line
-//           rawText = rawText.replace(/⏲\s(\d{1,2})\:(\d{2})/, '');
-//         }
-
-//         if (haveEndDate) {
-//           //eslint-disable-next-line
-//           rawText = rawText.replace(/\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/, '');
-//         }
-
-//         if (rawText !== '') {
-//           if (newEndDate.isBefore(startDate)) {
-//             eventService.pushEvent({
-//               id: startDate.format('YYYYMMDDHHmm') + '00' + i,
-//               title: rawText,
-//               originalContent: line,
-//               start: startDate.toDate(),
-//               end: startDate.toDate(),
-//               eventType: eventType,
-//               allDay: false,
-//             });
-//           } else {
-//             eventService.pushEvent({
-//               id: startDate.format('YYYYMMDDHHmm') + '00' + i,
-//               title: rawText,
-//               originalContent: line,
-//               start: startDate.toDate(),
-//               end: newEndDate.toDate(),
-//               eventType: eventType,
-//               allDay: false,
-//             });
-//           }
-//         }
-//       }
-//     }
-//     fileLines = null;
-//     fileContents = null;
-//   }
-//   // const allEvents = await getEventsFromDailyNote(file);
-// }
-
-const getAllLinesFromFile = (cache: string) => cache.split(/\r?\n/);
-// const lineIsValidTodo = (line: string) => {
-// //eslint-disable-next-line
-//   return /^\s*[\-\*]\s\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s?\s*\S/.test(line)
-// }
-const lineContainsTime = (line: string) => {
-  let regexMatch;
   if (
-    DefaultEventComposition != '' &&
-    /{TIME}/g.test(DefaultEventComposition) &&
-    /{CONTENT}/g.test(DefaultEventComposition)
+    settings.DefaultEventComposition !== '' &&
+    /{TIME}/g.test(settings.DefaultEventComposition) &&
+    /{CONTENT}/g.test(settings.DefaultEventComposition)
   ) {
-    //eslint-disable-next-line
-    regexMatch =
-      '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s)?' +
-      DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?\\d{1,2}:\\d{2}(\\<\\/time\\>)?').replace(
+    regexPattern =
+      '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s?)?' +
+      settings.DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?\\d{1,2}:\\d{2}(\\<\\/time\\>)?').replace(
         /{CONTENT}/g,
         '(.*)$',
       );
   } else {
-    //eslint-disable-next-line
-    regexMatch = '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s)?(\\<time\\>)?\\d{1,2}\\:\\d{2}(.*)$';
+    regexPattern = '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s)?(\\<time\\>)?\\d{1,2}\\:\\d{2}(.*)$';
   }
-  const regexMatchRe = new RegExp(regexMatch, '');
-  //eslint-disable-next-line
-  return regexMatchRe.test(line);
-  // The below line excludes entries with a ':' after the time as I was having issues with my calendar
-  // being pulled in. Once made configurable will be simpler to manage.
-  // return /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s)?(\<time\>)?\d{1,2}\:\d{2}[^:](.*)$/.test(line);
+
+  const regexMatcher = new RegExp(regexPattern, '');
+  return regexMatcher.test(line);
 };
 
-const lineContainsParseBelowToken = (line: string) => {
-  if (ProcessEntriesBelow === '') {
+const lineContainsParseBelowToken = (line: string, settings: BigCalendarSettings): boolean => {
+  if (settings.ProcessEntriesBelow === '') {
     return true;
   }
-  const re = new RegExp(ProcessEntriesBelow.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1'), '');
-  return re.test(line);
+
+  const pattern = new RegExp(settings.ProcessEntriesBelow.replace(/([.?*+^$[\]\\(){}|-])/g, '\\$1'), '');
+  return pattern.test(line);
 };
 
-const extractTextFromTodoLine = (line: string) => {
-  let regexMatch;
+const extractTextFromTodoLine = (line: string, settings: BigCalendarSettings): string => {
+  let regexPattern;
+
   if (
-    DefaultEventComposition != '' &&
-    /{TIME}/g.test(DefaultEventComposition) &&
-    /{CONTENT}/g.test(DefaultEventComposition)
+    settings.DefaultEventComposition !== '' &&
+    /{TIME}/g.test(settings.DefaultEventComposition) &&
+    /{CONTENT}/g.test(settings.DefaultEventComposition)
   ) {
-    //eslint-disable-next-line
-    regexMatch =
-      '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?' +
-      DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?((\\d{1,2})\\:(\\d{2}))?(\\<\\/time\\>)?').replace(
+    regexPattern =
+      '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s?)?' +
+      settings.DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?(\\d{1,2}):(\\d{2})(\\<\\/time\\>)?').replace(
         /{CONTENT}/g,
         '(.*)$',
       );
   } else {
-    //eslint-disable-next-line
-    regexMatch = '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?(\\<time\\>)?((\\d{1,2})\\:(\\d{2}))?(\\<\\/time\\>)?\\s?(.*)$';
+    regexPattern = '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s)?(\\<time\\>)?(\\d{1,2})\\:(\\d{2})(.*)$';
   }
-  const regexMatchRe = new RegExp(regexMatch, '');
-  //eslint-disable-next-line
-  return regexMatchRe.exec(line)?.[8];
-  // return /^\s*[\-\*]\s(\[(.{1})\]\s?)?(\<time\>)?((\d{1,2})\:(\d{2}))?(\<\/time\>)?\s?(.*)$/.exec(line)?.[8];
+
+  const regexMatcher = new RegExp(regexPattern, '');
+  const contentIndex = settings.DefaultEventComposition !== '' ? 5 : 7;
+  return regexMatcher.exec(line)?.[contentIndex] || '';
 };
 
-const extractHourFromBulletLine = (line: string) => {
-  let regexHourMatch;
-  if (
-    DefaultEventComposition != '' &&
-    /{TIME}/g.test(DefaultEventComposition) &&
-    /{CONTENT}/g.test(DefaultEventComposition)
-  ) {
-    //eslint-disable-next-line
-    regexHourMatch =
-      '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?' +
-      DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?(\\d{1,2})\\:(\\d{2})(\\<\\/time\\>)?').replace(
-        /{CONTENT}/g,
-        '(.*)$',
-      );
-  } else {
-    //eslint-disable-next-line
-    regexHourMatch = '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?(\\<time\\>)?(\\d{1,2})\\:(\\d{2})(.*)$';
-  }
-  const regexMatchRe = new RegExp(regexHourMatch, '');
-  //eslint-disable-next-line
-  return regexMatchRe.exec(line)?.[4];
+const extractEventTaskTypeFromLine = (line: string): string | undefined => {
+  return /^\s*[\-\*]\s(\[(.{1})\])\s(.*)$/.exec(line)?.[2];
 };
-
-const extractMinFromBulletLine = (line: string) => {
-  let regexHourMatch;
-  if (
-    DefaultEventComposition != '' &&
-    /{TIME}/g.test(DefaultEventComposition) &&
-    /{CONTENT}/g.test(DefaultEventComposition)
-  ) {
-    //eslint-disable-next-line
-    regexHourMatch =
-      '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?' +
-      DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?(\\d{1,2})\\:(\\d{2})(\\<\\/time\\>)?').replace(
-        /{CONTENT}/g,
-        '(.*)$',
-      );
-  } else {
-    //eslint-disable-next-line
-    regexHourMatch = '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?(\\<time\\>)?(\\d{1,2})\\:(\\d{2})(.*)$';
-  }
-  const regexMatchRe = new RegExp(regexHourMatch, '');
-  //eslint-disable-next-line
-  return regexMatchRe.exec(line)?.[5];
-  // /^\s*[\-\*]\s(\[(.{1})\]\s?)?(\<time\>)?(\d{1,2})\:(\d{2})(.*)$/.exec(line)?.[5];
-};
-
-const extractEventTaskTypeFromLine = (line: string) =>
-  //eslint-disable-next-line
-  /^\s*[\-\*]\s(\[(.{1})\])\s(.*)$/.exec(line)?.[2];
-// The below line excludes entries with a ':' after the time as I was having issues with my calendar
-// being pulled in. Once made configurable will be simpler to manage.
-// return /^\s*[\-\*]\s(\[(\s|x|X|\\|\-|\>|D|\?|\/|\+|R|\!|i|B|P|C)\]\s)?(\<time\>)?\d{1,2}\:\d{2}[^:](.*)$/.test(line);
 
 const extractEventEndHourFromLine = (line: string): number => {
-  let regexMatch;
-  //eslint-disable-next-line
-  regexMatch = '⏲\\s(\\d{1,2})\\:(\\d{2})';
-
-  const regexMatchRe = new RegExp(regexMatch, '');
-  //eslint-disable-next-line
-  return parseInt(regexMatchRe.exec(line)?.[1]);
+  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  return match ? parseInt(match[1]) : 0;
 };
 
 const extractEventEndMinFromLine = (line: string): number => {
-  let regexMatch;
-  //eslint-disable-next-line
-  regexMatch = '⏲\\s(\\d{1,2})\\:(\\d{2})';
-
-  const regexMatchRe = new RegExp(regexMatch, '');
-  //eslint-disable-next-line
-  return parseInt(regexMatchRe.exec(line)?.[2]);
+  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  return match ? parseInt(match[2]) : 0;
 };
-//eslint-disable-next-line
+
 const getDueDate = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[4];
