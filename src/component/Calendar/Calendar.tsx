@@ -1,13 +1,13 @@
 import React, {forwardRef, useCallback, useEffect, useMemo, memo} from 'react';
-import '../../less/Calendar.less';
+import '@/less/Calendar.less';
 import {Calendar, Event, momentLocalizer, SlotInfo, View} from 'react-big-calendar';
 import {moment} from 'obsidian';
 import withDragAndDrop, {withDragAndDropProps} from 'react-big-calendar/lib/addons/dragAndDrop';
-import dailyNotesService from '../../services/fileService';
-import GenericInputPrompt from '../../obComponents/GenericInputPrompt';
-import eventService from '../../services/eventService';
-import useFileStore from '../../stores/fileStore';
-import useCalendarStore, {CalendarState} from '../../stores/calendarStore';
+import dailyNotesService from '@/services/fileService';
+import GenericInputPrompt from '@/obComponents/GenericInputPrompt';
+import eventService from '@/services/eventService';
+import useFileStore from '@/stores/fileStore';
+import useCalendarStore from '@/stores/calendarStore';
 
 export interface EventRefActions {
   setEvents: (events: Model.Event[]) => void;

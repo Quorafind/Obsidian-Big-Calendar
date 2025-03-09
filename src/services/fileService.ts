@@ -1,9 +1,6 @@
-// import { moment } from 'obsidian';
-// import userService from "./userService";
-// import api from "../helpers/api";
-import useFileStore from '../stores/fileStore';
+import useFileStore from '@/stores/fileStore';
 import {getAllDailyNotes, getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
-import {App, TFile, moment, Vault} from 'obsidian';
+import {App, TFile} from 'obsidian';
 
 class FileService {
   public getState() {
@@ -15,10 +12,26 @@ class FileService {
     return app;
   }
 
+  public initAllFiles() {
+    const files = getAllDailyNotes();
+    useFileStore.getState().setFiles(files);
+    return;
+  }
+
   public async getAllFiles() {
     const files = getAllDailyNotes();
     useFileStore.getState().setFiles(files);
     return files;
+  }
+
+  /**
+   * Get all daily notes and update the store
+   * This method is used by the BigCalendar component
+   *
+   * @returns Promise resolving to the daily notes
+   */
+  public async getMyAllDailyNotes() {
+    return this.getAllFiles();
   }
 
   public async getDailyNoteByEvent(date: moment.Moment): Promise<TFile> {

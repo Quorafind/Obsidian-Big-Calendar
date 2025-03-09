@@ -1,4 +1,4 @@
-import utils from '../utils/utils';
+import utils from '@/utils/utils';
 import {create} from 'zustand';
 
 // Define the state interface
@@ -16,7 +16,6 @@ export interface EventState {
 
 // Create the store using Zustand
 const useEventStore = create<EventState>((set) => ({
-  // Initial state
   events: [],
   tags: [],
 

@@ -15,7 +15,6 @@ import {
   getDueLabel,
   getDueDate,
   safeExecute,
-  createDateTimeExtractor,
 } from '../api';
 
 /**

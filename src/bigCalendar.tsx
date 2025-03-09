@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom/client';
 
 import App from './App';
 import type BigCalendarPlugin from './index';
-import {dailyNotesService, eventService} from './services';
+import {fileService, eventService} from '@/services';
 import {getDateFromFile} from 'obsidian-daily-notes-interface';
 
 export class BigCalendar extends ItemView {
@@ -18,7 +18,6 @@ export class BigCalendar extends ItemView {
   }
 
   getDisplayText(): string {
-    // TODO: Make this interactive: Either the active workspace or the local graph
     return 'Big Calendar';
   }
 
@@ -30,14 +29,9 @@ export class BigCalendar extends ItemView {
     return CALENDAR_VIEW_TYPE;
   }
 
-  private onEventsSettingsUpdate(): void {
-    eventService.clearEvents();
-    eventService.fetchAllEvents();
-  }
-
   private async onFileDeleted(file: TFile): Promise<void> {
     if (getDateFromFile(file, 'day')) {
-      await dailyNotesService.getAllFiles();
+      await fileService.getAllFiles();
       eventService.clearEvents();
       eventService.fetchAllEvents();
     }
@@ -56,7 +50,7 @@ export class BigCalendar extends ItemView {
   private onFileCreated(file: TFile): void {
     if (this.app.workspace.layoutReady && this.root) {
       if (getDateFromFile(file, 'day')) {
-        dailyNotesService.getAllFiles();
+        fileService.getAllFiles();
         // eventService.clearEvents();
         eventService.fetchAllEvents();
       }
@@ -69,12 +63,9 @@ export class BigCalendar extends ItemView {
   //   }
 
   async onOpen(): Promise<void> {
-    this.onEventsSettingsUpdate = this.onEventsSettingsUpdate.bind(this);
     this.onFileCreated = this.onFileCreated.bind(this);
     this.onFileDeleted = this.onFileDeleted.bind(this);
     this.onFileModified = this.onFileModified.bind(this);
-
-    this.registerEvent(this.app.workspace.on('obsidian-events:settings-updated', this.onEventsSettingsUpdate));
 
     this.registerEvent(this.app.vault.on('create', this.onFileCreated));
     this.registerEvent(this.app.vault.on('delete', this.onFileDeleted));
@@ -82,13 +73,12 @@ export class BigCalendar extends ItemView {
     // this.registerEvent(this.app.vault.on('closed', this.onCalendarClose));
 
     // appStore.getState();
-    dailyNotesService.getApp(this.app);
+    fileService.getApp(this.app);
+    fileService.getAllFiles();
     eventService.fetchAllEvents();
-    dailyNotesService.getAllFiles();
-    dailyNotesService.getState();
 
     // Create root for React 18
-    this.root = ReactDOM.createRoot((this as any).contentEl);
+    this.root = ReactDOM.createRoot(this.contentEl);
     this.root.render(
       <React.StrictMode>
         <App />

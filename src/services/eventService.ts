@@ -1,67 +1,91 @@
-import useEventStore from '../stores/eventStore';
-import {waitForInsert} from '../obComponents/createEvent';
-import {changeEvent} from '../obComponents/updateEvent';
-import api from '../utils/api';
-// import userService from "./userService";
+import useEventStore from '@/stores/eventStore';
+import {waitForInsert} from '@/obComponents/createEvent';
+import {changeEvent} from '@/obComponents/updateEvent';
 import {stringOrDate} from 'react-big-calendar';
-import {deleteForever} from '../obComponents/deleteEvent';
-import fileService from './fileService';
-import {parseEventInfoFromLine, getAllLinesFromFile, lineContainsEvent} from '../utils/fileParser';
+import {deleteForever} from '@/obComponents/deleteEvent';
+import fileService from '@/services/fileService';
+import {parseEventInfoFromLine, lineContainsEvent} from '@/utils/fileParser';
 import {TFile} from 'obsidian';
+import {getEvents} from '@/obComponents/getEvents';
+import {hideEvent} from '@/obComponents/hideEvent';
 
+/**
+ * Event Service - Handles creation, updating, deletion and querying of calendar events
+ */
 class EventService {
   public initialized = false;
 
+  /**
+   * Get the current state of the event store
+   */
   public getState() {
     return useEventStore.getState();
   }
 
+  /**
+   * Fetch all events and update the store
+   * @returns Array of all events
+   */
   public async fetchAllEvents() {
-    // if (!userService.getState().user) {
-    //   return false;
-    // }
+    try {
+      const data = await getEvents();
+      const events = Array.isArray(data) ? [...data] : [];
 
-    // const { data } = await api.getMyEvents();
-    const data = await api.getMyEvents();
-    const events = [] as any[];
-    for (const m of data) {
-      events.push(m);
+      useEventStore.getState().setEvents(events);
+
+      if (!this.initialized) {
+        this.initialized = true;
+      }
+
+      return events;
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+      return [];
     }
-
-    useEventStore.getState().setEvents(events);
-
-    if (!this.initialized) {
-      this.initialized = true;
-    }
-
-    return events;
   }
 
+  /**
+   * Add a new event to the store
+   * @param event Event object to add
+   * @returns The added event
+   */
   public pushEvent(event: Model.Event) {
-    useEventStore.getState().insertEvent({
-      ...event,
-    });
-
+    useEventStore.getState().insertEvent({...event});
     return event;
   }
 
+  /**
+   * Find an event by ID
+   * @param id Event ID
+   * @returns Found event or undefined
+   */
   public getEventById(id: string) {
     const {events} = this.getState();
     return events.find((item) => item.id === id);
   }
 
+  /**
+   * Hide an event (remove from view but keep in delete file)
+   * @param id ID of the event to hide
+   * @returns Whether operation was successful
+   */
   public async hideEventById(id: string) {
     useEventStore.getState().deleteEventById(id);
 
     try {
-      await api.hideEvent(id);
+      await hideEvent(id);
       return true;
     } catch (err) {
-      console.error(err);
+      console.error('Failed to hide event:', err);
       return false;
     }
   }
 
+  /**
+   * Permanently delete an event
+   * @param id ID of the event to delete
+   * @returns Whether operation was successful
+   */
   public async deleteEventById(id: string) {
     useEventStore.getState().deleteEventById(id);
 
@@ -69,11 +93,18 @@ class EventService {
       await deleteForever(id);
       return true;
     } catch (err) {
-      console.error(err);
+      console.error('Failed to delete event:', err);
       return false;
     }
   }
 
+  /**
+   * Edit an event
+   * @param event Event object to edit
+   * @param startDate New start date
+   * @param endDate New end date
+   * @returns Updated event or null
+   */
   public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate) {
     useEventStore.getState().editEvent(event);
 
@@ -91,42 +122,40 @@ class EventService {
       }
       return event;
     } catch (err) {
-      console.error(err);
+      console.error('Failed to edit event:', err);
       return null;
     }
   }
 
-  // public updateTagsState() {
-  //   const {events} = this.getState();
-  //   const tagsSet = new Set<string>();
-  //   for (const m of events) {
-  //     for (const t of Array.from(m.content.match(TAG_REG) ?? [])) {
-  //       tagsSet.add(t.replace(TAG_REG, '$1').trim());
-  //     }
-  //     for (const t of Array.from(m.content.match(NOP_FIRST_TAG_REG) ?? [])) {
-  //       tagsSet.add(t.replace(NOP_FIRST_TAG_REG, '$1').trim());
-  //     }
-  //     for (const t of Array.from(m.content.match(FIRST_TAG_REG) ?? [])) {
-  //       tagsSet.add(t.replace(FIRST_TAG_REG, '$2').trim());
-  //     }
-  //   }
-
-  //   appStore.dispatch({
-  //     type: 'SET_TAGS',
-  //     payload: {
-  //       tags: Array.from(tagsSet),
-  //     },
-  //   });
-  // }
-
+  /**
+   * Clear all events
+   */
   public clearEvents() {
     useEventStore.getState().setEvents([]);
   }
 
+  /**
+   * Create a new event
+   * @param text Event content
+   * @param startDate Start date
+   * @param endDate End date
+   * @returns Created event object
+   */
   public async createEvent(text: string, startDate: stringOrDate, endDate: stringOrDate): Promise<Model.Event> {
     return await waitForInsert(text, startDate, endDate);
   }
 
+  /**
+   * Update an event
+   * @param eventId Event ID
+   * @param originalText Original text
+   * @param text New text
+   * @param type Event type
+   * @param startDate Start date
+   * @param endDate End date
+   * @param originalEndDate Original end date
+   * @returns Updated event or null
+   */
   public async updateEvent(
     eventId: string,
     originalText: string,
@@ -153,10 +182,9 @@ class EventService {
   }
 
   /**
-   * Parse an event from a line of text
-   *
-   * @param line The line to parse
-   * @returns Partial event object with extracted information
+   * Parse an event from a text line
+   * @param line Text line to parse
+   * @returns Partial event object or null
    */
   public parseEventFromLine(line: string): Partial<Model.Event> | null {
     if (!lineContainsEvent(line)) {
@@ -198,10 +226,13 @@ class EventService {
 
   /**
    * Update an event in a file
-   *
-   * @param eventId ID of the event to update
-   * @param content New content for the event
-   * @returns Promise resolving to void
+   * @param eventId Event ID
+   * @param content New content
+   * @param eventType Event type
+   * @param eventStartDate Start date
+   * @param eventEndDate End date
+   * @param originalEndDate Original end date
+   * @returns Updated event
    */
   public async updateEventInFile(
     eventId: string,
@@ -213,7 +244,7 @@ class EventService {
   ): Promise<Model.Event> {
     return await changeEvent(
       eventId,
-      '', // originalContent (this might need to be filled in)
+      '', // originalContent
       content,
       eventType,
       eventStartDate,
@@ -224,10 +255,9 @@ class EventService {
 
   /**
    * Create an event in a file
-   *
-   * @param content Content for the new event
-   * @param date Date for the event
-   * @returns Promise resolving to the event ID
+   * @param content Event content
+   * @param date Event date
+   * @returns Event ID
    */
   public async createEventInFile(content: string, date: Date): Promise<string> {
     const result = await waitForInsert(content, date, '');
@@ -236,9 +266,7 @@ class EventService {
 
   /**
    * Delete an event from a file
-   *
-   * @param eventId ID of the event to delete
-   * @returns Promise resolving to void
+   * @param eventId Event ID
    */
   public async deleteEventFromFile(eventId: string): Promise<void> {
     await deleteForever(eventId);
@@ -246,9 +274,8 @@ class EventService {
 
   /**
    * Get the file associated with an event
-   *
-   * @param eventId ID of the event
-   * @returns The TFile object or null if not found
+   * @param eventId Event ID
+   * @returns File object or null
    */
   public getEventFile(eventId: string): TFile | null {
     return fileService.getFile(eventId);

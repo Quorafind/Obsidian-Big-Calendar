@@ -25,4 +25,5 @@ export default {
   Donate: 'Donate',
   'If you like this plugin, consider donating to support continued development:':
     'If you like this plugin, consider donating to support continued development:',
+  'Close big calendar successfully': 'Close big calendar successfully',
 };

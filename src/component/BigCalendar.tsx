@@ -1,24 +1,26 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {dailyNotesService, eventService} from '../services';
+import {fileService, eventService} from '@/services';
 import {Notice} from 'obsidian';
-import CalendarComponent, {EventRefActions} from './Calendar/Calendar';
+import CalendarComponent, {EventRefActions} from '@/component/Calendar/Calendar';
 import {View, SlotInfo} from 'react-big-calendar';
-import {showEventInDailyNotes} from '../obComponents/showEvent';
-import {useEvents} from '../hooks/useStore';
-import useGlobalStateStore from 'src/stores/globalStateStore';
+import {showEventInDailyNotes} from '@/obComponents/showEvent';
+import {useEvents} from '@/hooks/useStore';
+import useCalendarStore from '@/stores/calendarStore';
 
 interface Props {}
 
 const BigCalendar: React.FC<Props> = () => {
   // 使用 Zustand hook 来获取事件数据
   const events = useEvents();
-  const settings = useGlobalStateStore((state) => state.pluginSetting);
   const [isFetching, setFetchStatus] = useState(false);
   const eventRef = useRef<EventRefActions>(null);
 
+  const calendarView = useCalendarStore((state) => state.calendarView);
+  const startDay = useCalendarStore((state) => state.startDay);
+
   useEffect(() => {
     // 获取所有事件和日记笔记
-    Promise.all([eventService.fetchAllEvents(), dailyNotesService.getMyAllDailyNotes()])
+    Promise.all([eventService.fetchAllEvents(), fileService.getMyAllDailyNotes()])
       .then(() => {
         setFetchStatus(true);
       })
@@ -58,20 +60,18 @@ const BigCalendar: React.FC<Props> = () => {
     () => ({
       selectable: true,
       resizeable: true,
-      StartDate: StartDate,
-      defaultView: 'month' as View,
+      StartDate: startDay, // Use the startDay from the store
+      defaultView: calendarView as View,
       popup: true,
       onEventDoubleClick: handleEventDoubleClick,
       onEventSelect: handleEventSelect,
     }),
-    [handleEventDoubleClick, handleEventSelect],
+    [handleEventDoubleClick, handleEventSelect, calendarView, startDay],
   );
 
   return (
     <div className="big-calendar-wrapper">
-      <Only when={isFetching}>
-        <CalendarComponent ref={eventRef} {...calendarConfig} />
-      </Only>
+      {isFetching ? <div>Loading...</div> : <CalendarComponent ref={eventRef} {...calendarConfig} />}
     </div>
   );
 };

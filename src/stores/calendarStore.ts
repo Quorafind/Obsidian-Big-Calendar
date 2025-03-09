@@ -1,8 +1,6 @@
 import {create} from 'zustand';
-import {Event, View} from 'react-big-calendar';
-import {stringOrDate} from 'react-big-calendar';
-import {App} from 'obsidian';
-import {moment} from 'obsidian';
+import {View} from 'react-big-calendar';
+import {App, moment} from 'obsidian';
 
 // Define the Calendar state interface
 export interface CalendarState {

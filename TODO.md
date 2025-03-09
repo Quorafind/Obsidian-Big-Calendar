@@ -30,7 +30,7 @@
 
 ## Additional Improvements
 
-- [ ] Update dependencies to the latest versions
+- [x] Update dependencies to the latest versions
 - [x] Fix TypeScript errors and linting issues in `App.tsx`
 - [x] Fix remaining TypeScript errors and linting issues
 - [x] Improve code organization and maintainability
@@ -50,99 +50,56 @@
   - [x] Fix storage-related linter errors
   - [x] Improve performance with memoization
   - [x] Clean up unused code and comments
+- [x] Refactor the BigCalendar component:
+  - [x] Fix linter errors related to dailyNotesService
+  - [x] Fix StartDate prop usage
+  - [x] Integrate with Zustand store for state management
 
-# Obsidian Big Calendar Refactoring Plan
+## obComponents Refactoring
 
-## 概述 (Overview)
+- [x] Create unified regex generators in `src/utils/regexGenerators.ts`:
 
-将 `obComponents` 目录中的组件进行重构，将共用的正则表达式生成器、文件解析逻辑等抽取到 `api.ts` 中，并通过 `eventService` 提供统一的操作方法。
+  - [x] `createDueDateRegex()` - Generate regex for due dates
+  - [x] `createTimeRegex()` - Generate regex for time recognition
+  - [x] `createDateTimeExtractor()` - Extract date and time from text
 
-## 重构任务 (Refactoring Tasks)
+- [x] Implement file parsing logic in `src/utils/fileParser.ts`:
 
-### 1. 创建统一的正则表达式生成器 (Create Unified Regex Generators)
+  - [x] `getAllLinesFromFile(content: string): string[]`
+  - [x] `extractEventTime(line: string): { hour: number, minute: number }`
+  - [x] `extractDueDate(line: string): { hasDate: boolean, label: string, date: string }`
 
-- [x] 在 `src/utils/regexGenerators.ts` 中创建以下函数：
-  - [x] `createDueDateRegex()` - 生成识别截止日期的正则表达式 (📅|📆|@{|[due::)
-  - [x] `createTimeRegex()` - 生成识别时间的正则表达式 (⏲)
-  - [x] `createDateTimeExtractor()` - 从文本中提取日期和时间
+- [x] Enhance file operations in `src/services/fileService.ts`:
 
-### 2. 文件解析逻辑 (File Parsing Logic)
+  - [x] `getFile(eventId: string): TFile`
+  - [x] `getDailyNotePath(): string`
+  - [x] `readFileContent(filePath: string): Promise<string>`
+  - [x] `writeFileContent(filePath: string, content: string): Promise<void>`
 
-- [x] 在 `src/utils/fileParser.ts` 中创建以下函数：
-  - [x] `getAllLinesFromFile(content: string): string[]` - 将文件内容分割为行
-  - [x] `extractEventTime(line: string): { hour: number, minute: number }` - 从行中提取事件时间
-  - [x] `extractDueDate(line: string): { hasDate: boolean, label: string, date: string }` - 从行中提取截止日期
+- [x] Enhance `EventService` in `src/services/eventService.ts`:
 
-### 3. 文件操作函数 (File Operations)
+  - [x] `parseEventFromLine(line: string): Partial<Model.Event>`
+  - [x] `updateEventInFile(eventId: string, content: string): Promise<void>`
+  - [x] `createEventInFile(content: string, date: Date): Promise<string>`
+  - [x] `deleteEventFromFile(eventId: string): Promise<void>`
 
-- [x] 在 `src/services/fileService.ts` 中添加以下函数：
-  - [x] `getFile(eventId: string): TFile` - 根据事件 ID 获取文件
-  - [x] `getDailyNotePath(): string` - 获取每日笔记路径
-  - [x] `readFileContent(filePath: string): Promise<string>` - 读取文件内容
-  - [x] `writeFileContent(filePath: string, content: string): Promise<void>` - 写入文件内容
+- [x] Create unified API in `src/api.ts`:
 
-### 4. 增强 eventService (Enhance eventService)
+  - [x] Export all extracted functions from `obComponents`
+  - [x] Provide unified interface for Obsidian API interactions
+  - [x] Standardize error handling
 
-- [x] 扩展 `src/services/eventService.ts` 中的 `EventService` 类，添加以下方法：
-  - [x] `parseEventFromLine(line: string): Partial<Model.Event>` - 从行中解析事件
-  - [x] `updateEventInFile(eventId: string, content: string): Promise<void>` - 在文件中更新事件
-  - [x] `createEventInFile(content: string, date: Date): Promise<string>` - 在文件中创建事件
-  - [x] `deleteEventFromFile(eventId: string): Promise<void>` - 从文件中删除事件
+- [x] Refactor individual components in `obComponents` directory:
+  - [x] Update `updateEvent.ts` to use new API
+  - [x] Update `createEvent.ts` to use new API
+  - [x] Update `deleteEvent.ts` to use new API
+  - [x] Update `getEvents.ts` to use new API
+  - [x] Update `parseTask.ts` to use new API
 
-### 5. 创建 API 文件 (Create API File)
+## Next Steps
 
-- [x] 创建 `src/api.ts` 文件，提供以下功能：
-  - [x] 导出所有从 `obComponents` 抽取出来的函数
-  - [x] 提供统一的接口与 Obsidian API 交互
-  - [x] 统一处理错误和异常
-
-### 6. 重构 obComponents 中的文件 (Refactor obComponents Files)
-
-- [x] 修改 `updateEvent.ts` 使用新的工具函数
-- [x] 修改 `createEvent.ts` 使用新的工具函数
-- [x] 修改 `deleteEvent.ts` 使用新的工具函数
-- [x] 修改 `getEvents.ts` 使用新的工具函数
-- [x] 修改 `parseTask.ts` 使用新的工具函数
-
-## 重构后的结构 (Post-Refactoring Structure)
-
-```
-src/
-  ├── api.ts                   # 统一 API 入口 ✅
-  ├── services/
-  │   ├── eventService.ts      # 增强的事件服务 ✅
-  │   └── fileService.ts       # 增强的文件服务 ✅
-  ├── utils/
-  │   ├── regexGenerators.ts   # 正则表达式生成器 ✅
-  │   └── fileParser.ts        # 文件解析工具 ✅
-  └── obComponents/            # 重构后的组件
-      ├── updateEvent.ts       # 使用新 API 的更新事件组件 ✅
-      ├── createEvent.ts       # 使用新 API 的创建事件组件 ✅
-      └── ...                  # 其他组件 ✅
-```
-
-## 优势 (Benefits)
-
-1. 代码复用 - 减少重复的正则表达式和解析逻辑
-2. 可维护性 - 集中维护正则表达式和解析逻辑
-3. 可测试性 - 单元测试更容易编写
-4. 模块化 - 清晰的职责分离
-
-## 下一步 (Next Steps)
-
-1. ✅ 重构 `obComponents` 目录中的各个文件，使其使用新创建的 API：
-
-   - ✅ 更新 `updateEvent.ts`
-   - ✅ 更新 `createEvent.ts`
-   - ✅ 更新 `deleteEvent.ts`
-   - ✅ 更新 `getEvents.ts`
-   - ✅ 更新 `parseTask.ts`
-
-2. 解决重构过程中发现的 TypeScript 错误：
-
-   - 修复 `bigCalendar.ts` 中的导出问题 (`InsertAfter` 和 `DefaultEventComposition`)
-   - 修复 `appStore` 中的 `dailyNotesState` 问题
-
-3. 编写单元测试以确保重构的代码正常工作
-
-4. 更新文档，反映新的代码结构和 API 用法
+- [ ] Resolve any remaining TypeScript errors:
+  - [ ] Fix export issues in `bigCalendar.ts` (`InsertAfter` and `DefaultEventComposition`)
+  - [ ] Fix `dailyNotesState` issues in `appStore`
+- [ ] Write unit tests for refactored code
+- [ ] Update documentation to reflect new code structure and API usage

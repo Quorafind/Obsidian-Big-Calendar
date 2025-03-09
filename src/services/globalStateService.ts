@@ -1,8 +1,7 @@
-import {BigCalendarSettings} from 'src/setting';
-import {storage} from '../utils/storage';
-import useGlobalStateStore, {AppSetting} from '../stores/globalStateStore';
-import appStore from 'src/stores/appStore';
-import fileStore from 'src/stores/fileStore';
+import {BigCalendarSettings} from '@/setting';
+import {storage} from '@/utils/storage';
+import useGlobalStateStore, {AppSetting} from '@/stores/globalStateStore';
+import fileStore from '@/stores/fileStore';
 
 class GlobalStateService {
   constructor() {

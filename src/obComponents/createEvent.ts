@@ -1,9 +1,9 @@
 import {moment} from 'obsidian';
 import {createDailyNote, getAllDailyNotes, getDailyNote} from 'obsidian-daily-notes-interface';
 import {stringOrDate} from 'react-big-calendar';
-import {getAllLinesFromFile, safeExecute} from '../api';
-import fileService from '../services/fileService';
-import {globalStateService} from 'src/services';
+import {getAllLinesFromFile, safeExecute} from '@/api';
+import fileService from '@/services/fileService';
+import {globalStateService} from '@/services';
 
 interface MContent {
   content: string;

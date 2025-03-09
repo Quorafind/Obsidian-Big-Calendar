@@ -7,8 +7,7 @@ export default {
   Monday: '星期一',
   'Regular Options': '常规选项',
   'First Day of Week': '一周开始',
-  'Choose the first day of the week. Sunday is the default.':
-    '选择一周的开始日期。默认为星期日。',
+  'Choose the first day of the week. Sunday is the default.': '选择一周的开始日期。默认为星期日。',
   'Insert after heading': '在指定标题后插入事件',
   'You should set the same heading below if you want to insert and process events below the same heading.':
     '你如果想要插入标题的同时显示对应标题下的事件，你必须保证当前设置与下方的解析设置是一致的。当为空时插入到文末',
@@ -23,4 +22,5 @@ export default {
   Donate: '捐赠',
   'If you like this plugin, consider donating to support continued development:':
     '如果你喜欢这个插件，而且也希望给我买鸡腿，那么可以考虑 Github 页面右边的 Sponsor~',
+  'Close big calendar successfully': '成功关闭大日历',
 };

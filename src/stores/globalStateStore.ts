@@ -1,4 +1,4 @@
-import {BigCalendarSettings} from 'src/setting';
+import {BigCalendarSettings} from '@/setting';
 import {create} from 'zustand';
 
 export interface AppSetting {

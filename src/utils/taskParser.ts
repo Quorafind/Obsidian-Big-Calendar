@@ -1,6 +1,5 @@
 import {create} from 'zustand';
-import type {Moment} from 'moment';
-import {TFile} from 'obsidian';
+import {TFile, moment} from 'obsidian';
 
 // Define task types
 export enum TaskStatus {
@@ -16,8 +15,8 @@ export interface Task {
   status: TaskStatus;
   file: TFile;
   line: number;
-  date?: Moment;
-  dueDate?: Moment;
+  date?: moment.Moment;
+  dueDate?: moment.Moment;
   tags?: string[];
   isEvent?: boolean;
   startTime?: string;

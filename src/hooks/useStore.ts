@@ -1,5 +1,5 @@
 import useAppStore, {stores} from '../stores/appStore';
-import useDailyNotesStore from '../stores/fileStore';
+import useFileStore from '../stores/fileStore';
 import useEventStore from '../stores/eventStore';
 import useGlobalStateStore from '../stores/globalStateStore';
 import useLocationStore from '../stores/locationStore';
@@ -11,7 +11,7 @@ export const useStore = () => {
   return {
     // Individual stores
     useAppStore,
-    useDailyNotesStore,
+    useFileStore,
     useEventStore,
     useGlobalStateStore,
     useLocationStore,
@@ -24,14 +24,12 @@ export const useStore = () => {
 // Example selectors for common state access patterns
 export const useEvents = () => useEventStore((state) => state.events);
 export const useTags = () => useEventStore((state) => state.tags);
-export const useDailyNotes = () => useDailyNotesStore((state) => state.dailyNotes);
-export const useApp = () => useDailyNotesStore((state) => state.app);
+export const useDailyNotes = () => useFileStore((state) => state.files);
+export const useApp = () => useFileStore((state) => state.app);
 export const useGlobalSettings = () =>
   useGlobalStateStore((state) => ({
-    shouldSplitEventWord: state.shouldSplitEventWord,
     shouldHideImageUrl: state.shouldHideImageUrl,
     shouldUseMarkdownParser: state.shouldUseMarkdownParser,
-    useTinyUndoHistoryCache: state.useTinyUndoHistoryCache,
   }));
 export const useIsMobileView = () => useGlobalStateStore((state) => state.isMobileView);
 export const useShowSidebar = () => useGlobalStateStore((state) => state.showSiderbarInMobileView);

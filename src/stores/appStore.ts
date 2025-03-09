@@ -1,8 +1,8 @@
 import {create} from 'zustand';
-import useDailyNotesStore from './fileStore';
-import useEventStore from './eventStore';
-import useGlobalStateStore from './globalStateStore';
-import useLocationStore from './locationStore';
+import useDailyNotesStore from '@/stores/fileStore';
+import useEventStore from '@/stores/eventStore';
+import useGlobalStateStore from '@/stores/globalStateStore';
+import useLocationStore from '@/stores/locationStore';
 
 // This is a simplified root store that can be used to access other stores
 // No need to combine reducers like in Redux since Zustand uses individual stores

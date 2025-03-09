@@ -1,21 +1,5 @@
 // import utils from "../helpers/utils";
-import useLocationStore, {LocationState} from '../stores/locationStore';
-
-// const updateLocationUrl = (method: "replace" | "push" = "replace") => {
-//   const { query, pathname, hash } = appStore.getState().locationState;
-//   let queryString = utils.transformObjectToParamsString(query);
-//   if (queryString) {
-//     queryString = "?" + queryString;
-//   } else {
-//     queryString = "";
-//   }
-
-//   if (method === "replace") {
-//     window.history.replaceState(null, "", pathname + hash + queryString);
-//   } else {
-//     window.history.pushState(null, "", pathname + hash + queryString);
-//   }
-// };
+import useLocationStore from '@/stores/locationStore';
 
 class LocationService {
   constructor() {
@@ -84,7 +68,7 @@ class LocationService {
     this.updateLocationUrl();
   };
 
-  public setPathname = (pathname: string) => {
+  public setPathname = (pathname: AppRouter) => {
     useLocationStore.getState().setPathname(pathname);
     this.updateLocationUrl();
   };
