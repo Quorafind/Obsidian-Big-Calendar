@@ -1,5 +1,4 @@
 import {App, TFile} from 'obsidian';
-import {getAllDailyNotes} from 'obsidian-daily-notes-interface';
 import {create} from 'zustand';
 
 // Define the state interface

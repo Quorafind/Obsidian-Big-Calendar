@@ -1,5 +1,4 @@
-import React, {useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
-import appContext from '../stores/appContext';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {dailyNotesService, eventService} from '../services';
 import {Notice} from 'obsidian';
 import CalendarComponent, {EventRefActions} from './Calendar/Calendar';
@@ -7,97 +6,72 @@ import {View, SlotInfo} from 'react-big-calendar';
 import Only from './common/OnlyWhen';
 import {showEventInDailyNotes} from '../obComponents/obShowEvent';
 import {StartDate} from '../bigCalendar';
+import {useEvents} from '../hooks/useStore';
 
 interface Props {}
 
-// let allEvents;
-
 const BigCalendar: React.FC<Props> = () => {
-  const {
-    eventState: {events},
-  } = useContext(appContext);
-  //   const prevGlobalStateRef = useRef(globalState);
+  // 使用 Zustand hook 来获取事件数据
+  const events = useEvents();
   const [isFetching, setFetchStatus] = useState(false);
   const eventRef = useRef<EventRefActions>(null);
-  //   const [change, setChange] = useState(true);
-
-  //   allEvents = events;
 
   useEffect(() => {
-    // eventService
-    //   .fetchAllEvents()
-    //   .then(() => {
-    //     setFetchStatus(true);
-    //   })
-    //   .catch(() => {
-    //     new Notice('😭 Fetch Error');
-    //   });
-    dailyNotesService
-      .getMyAllDailyNotes()
+    // 获取所有事件和日记笔记
+    Promise.all([eventService.fetchAllEvents(), dailyNotesService.getMyAllDailyNotes()])
       .then(() => {
         setFetchStatus(true);
       })
-      .catch(() => {
-        new Notice('😭 Fetch DailyNotes Error');
+      .catch((err) => {
+        console.error(err);
+        new Notice('Failed to fetch data');
+        setFetchStatus(false);
       });
-    dailyNotesService.getState();
-  }, [StartDate]);
+  }, []);
 
-  useMemo(() => {
-    if (!eventRef.current) {
-      return;
+  // 当事件变化时更新日历
+  useEffect(() => {
+    if (eventRef.current && events) {
+      eventRef.current.setEvents(events);
     }
-    eventRef.current.setEvents(events);
-    // setChange(false);
   }, [events]);
 
-  const handleEventSelect = useCallback(
-    async (content: string, slotInfo: SlotInfo) => {
+  // 处理事件双击
+  const handleEventDoubleClick = useCallback(async (event: any) => {
+    if (event.path === undefined) {
+      await showEventInDailyNotes(event.id);
+    }
+  }, []);
+
+  // 处理事件创建
+  const handleEventSelect = useCallback(async (content: string, slotInfo: SlotInfo) => {
+    try {
       const newEvent = await eventService.createEvent(content, slotInfo.start, slotInfo.end);
       eventService.pushEvent(newEvent);
-      // const events = appStore.getState().eventState.events;
-      // eventRef.current?.setEvents(events);
-    },
-    [StartDate],
-  );
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
-  const handleEventDoubleClick = useCallback(
-    async (event: any) => {
-      if (event.path === undefined) {
-        showEventInDailyNotes(event.id);
-      }
-      // const lineNum = parseInt(event.id.slice(14));
-      // leaf.openFile(event.file, {eState: {line: lineNum}});
-    },
-    [StartDate],
-  );
-
+  // 日历配置
   const calendarConfig = useMemo(
     () => ({
       selectable: true,
       resizeable: true,
-      //   events: events,
       StartDate: StartDate,
       defaultView: 'month' as View,
       popup: true,
       onEventDoubleClick: handleEventDoubleClick,
       onEventSelect: handleEventSelect,
     }),
-    [StartDate],
+    [handleEventDoubleClick, handleEventSelect],
   );
 
   return (
-    <div className={`big-calendar-wrapper`}>
-      {/* <Only when={isFetching}> */}
-        {useMemo(
-          () => (
-            console.log("render twice"),
-            <CalendarComponent ref={eventRef} {...calendarConfig} />
-          ),
-          [StartDate],
-        )}
-        {/* <CalendarComponent {...calendarConfig} /> */}
-      {/* </Only> */}
+    <div className="big-calendar-wrapper">
+      <Only when={isFetching}>
+        <CalendarComponent ref={eventRef} {...calendarConfig} />
+      </Only>
     </div>
   );
 };

@@ -1,15 +1,13 @@
-import {useCallback, useContext, useEffect} from 'react';
+import {useCallback, useEffect} from 'react';
 // import { locationService, userService } from "../services";
 import {homeRouterSwitch} from '../routers';
-import appContext from '../stores/appContext';
 import useLoading from '../hooks/useLoading';
 import React from 'react';
+import {useLocation} from '../hooks/useStore';
 
 function Home() {
-  const {
-    locationState: {pathname},
-  } = useContext(appContext);
-  // const { app } = dailyNotesService.getState();
+  // 使用我们的自定义钩子获取位置状态
+  const {pathname} = useLocation();
   const loadingState = useLoading();
   //   // const refresh = useRefresh();
 
@@ -20,9 +18,9 @@ function Home() {
   return (
     <>
       {/* {loadingState.isLoading ? null : ( */}
-        <section id="page-wrapper">
-          <main className="content-wrapper">{homeRouterSwitch(pathname)}</main>
-        </section>
+      <section id="page-wrapper">
+        <main className="content-wrapper">{homeRouterSwitch(pathname)}</main>
+      </section>
       {/* )} */}
     </>
   );

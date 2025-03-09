@@ -8,18 +8,18 @@
   - [x] `appStore.ts`
   - [x] `dailyNotesStore.ts`
   - [x] `eventStore.ts`
-  - [ ] `globalStateStore.ts`
-  - [ ] `locationStore.ts`
-- [ ] Remove unused `appContext.ts`
+  - [x] `globalStateStore.ts`
+  - [x] `locationStore.ts`
+- [x] Remove unused `appContext.ts`
 
 ## Service Refactoring
 
 - [x] Refactor all services in `src/services/` to work with Zustand:
   - [x] `dailyNotesService.ts`
   - [x] `eventService.ts`
-  - [ ] `globalStateService.ts`
-  - [ ] `locationService.ts`
-  - [ ] `resourceService.ts`
+  - [x] `globalStateService.ts`
+  - [x] `locationService.ts`
+  - [x] `resourceService.ts`
 - [x] Fix the Moment import issue in `dailyNotesService.ts`
 
 ## Task Parsing Optimization
@@ -31,7 +31,8 @@
 ## Additional Improvements
 
 - [ ] Update dependencies to the latest versions
-- [ ] Fix TypeScript errors and linting issues
+- [x] Fix TypeScript errors and linting issues in `App.tsx`
+- [ ] Fix remaining TypeScript errors and linting issues
 - [x] Improve code organization and maintainability
 - [x] Add proper documentation and comments
 - [ ] Write unit tests for the refactored code

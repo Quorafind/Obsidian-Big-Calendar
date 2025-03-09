@@ -1,6 +1,8 @@
 import {create} from 'zustand';
 import useDailyNotesStore from './dailyNotesStore';
 import useEventStore from './eventStore';
+import useGlobalStateStore from './globalStateStore';
+import useLocationStore from './locationStore';
 
 // This is a simplified root store that can be used to access other stores
 // No need to combine reducers like in Redux since Zustand uses individual stores
@@ -28,6 +30,8 @@ export const stores = {
   app: useAppStore,
   dailyNotes: useDailyNotesStore,
   events: useEventStore,
+  globalState: useGlobalStateStore,
+  location: useLocationStore,
   // Add other stores here as they are refactored
 };
 
