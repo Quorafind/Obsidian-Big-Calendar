@@ -4,12 +4,21 @@ import {CALENDAR_VIEW_TYPE} from './constants';
 import addIcons from './obComponents/customIcons';
 import {BigCalendarSettingTab, DEFAULT_SETTINGS, BigCalendarSettings} from './setting';
 import {t} from './translations/helper';
+import {fileService, eventService, globalService} from './services';
 
 export default class BigCalendarPlugin extends Plugin {
   public settings: BigCalendarSettings;
 
   async onload(): Promise<void> {
     await this.loadSettings();
+    globalService.setPluginSetting(this.settings);
+    console.log(this.settings, globalService.getState().pluginSetting);
+
+    this.app.workspace.onLayoutReady(() => {
+      fileService.setApp(this.app);
+      fileService.initAllFiles();
+      eventService.fetchAllEvents();
+    });
 
     // Register view and add icons
     this.registerView(CALENDAR_VIEW_TYPE, (leaf) => new BigCalendar(leaf, this));

@@ -26,4 +26,6 @@ export default {
   'If you like this plugin, consider donating to support continued development:':
     'If you like this plugin, consider donating to support continued development:',
   'Close big calendar successfully': 'Close big calendar successfully',
+  'Your daily notes folder is not set correctly. Please check your settings.':
+    'Your daily notes folder is not set correctly. Please check your settings.',
 };

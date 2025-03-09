@@ -1,21 +1,11 @@
 import {moment} from 'obsidian';
-import {getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
-// import appStore from "../stores/appStore";
+import {getDailyNote} from 'obsidian-daily-notes-interface';
 import fileService from '../services/fileService';
-import eventService from '../services/eventService';
 import {TFile} from 'obsidian';
 import {waitForInsert} from './createEvent';
 import {stringOrDate} from 'react-big-calendar';
 // Import from our new API instead of defining locally
-import {
-  createTimeRegex,
-  getAllLinesFromFile,
-  extractEventTime,
-  ifDueDate,
-  getDueLabel,
-  getDueDate,
-  safeExecute,
-} from '../api';
+import {createTimeRegex, getAllLinesFromFile, extractEventTime, safeExecute} from '../api';
 
 /**
  * Changes an existing event with new content and dates
@@ -41,14 +31,12 @@ export async function changeEvent(
   return await safeExecute(async () => {
     const {app} = fileService.getState();
     const files = await fileService.getAllFiles();
-    const idString = parseInt(eventid.slice(14));
 
     // Use our new regex function instead of inline regex
-    const haveEndTime = createTimeRegex().test(originalContent);
+    const timeRegex = createTimeRegex();
 
     const startTimeString = eventid.slice(0, 13) + '00';
     const originalStartDate = moment(startTimeString, 'YYYYMMDDHHmmSS');
-    const originalEndDateMoment = moment(originalEndDate);
 
     const dailyNote = getDailyNote(originalStartDate, files);
     if (!dailyNote) {
@@ -63,11 +51,10 @@ export async function changeEvent(
 
     // Find the line with the event
     let lineIndex = -1;
-    let originalLine = '';
 
     for (let i = 0; i < fileLines.length; i++) {
       const line = fileLines[i];
-      if (line.includes(originalContent) || (line.startsWith('- ') && createTimeRegex().test(line))) {
+      if (line.includes(originalContent) || (line.startsWith('- ') && timeRegex.test(line))) {
         const timeInfo = extractEventTime(line);
         if (timeInfo) {
           const {hour, minute} = timeInfo;
@@ -75,7 +62,6 @@ export async function changeEvent(
 
           if (lineTime.format('YYYYMMDDHHmm') === eventid.slice(0, 12)) {
             lineIndex = i;
-            originalLine = line;
             break;
           }
         }
@@ -146,7 +132,7 @@ export function getDailyNotePath(): string {
  * @returns The end hour or 0 if not found
  */
 export function extractEventEndHourFromLine(line: string): number {
-  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  const match = /⏲\s?(\d{1,2}):(\d{2})/.exec(line);
   return match ? parseInt(match[1]) : 0;
 }
 
@@ -157,6 +143,6 @@ export function extractEventEndHourFromLine(line: string): number {
  * @returns The end minute or 0 if not found
  */
 export function extractEventEndMinFromLine(line: string): number {
-  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  const match = /⏲\s?(\d{1,2}):(\d{2})/.exec(line);
   return match ? parseInt(match[2]) : 0;
 }

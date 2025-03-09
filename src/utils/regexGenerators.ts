@@ -10,7 +10,7 @@
  * @returns RegExp object for matching due dates
  */
 export function createDueDateRegex(): RegExp {
-  return /\s(📅|📆|(@{)|(\[due\:\:))\s?(\d{4}-\d{2}-\d{2})(\])?/;
+  return /\s(📅|📆|(@{)|(\[due::))\s?(\d{4}-\d{2}-\d{2})(\])?/;
 }
 
 /**
@@ -50,7 +50,7 @@ export function getDueDate(line: string): string | undefined {
  * @returns RegExp object for matching times
  */
 export function createTimeRegex(): RegExp {
-  return /⏲\s?(\d{1,2})\:(\d{2})/;
+  return /⏲\s?(\d{1,2}):(\d{2})/;
 }
 
 /**

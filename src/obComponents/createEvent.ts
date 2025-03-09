@@ -3,7 +3,7 @@ import {createDailyNote, getAllDailyNotes, getDailyNote} from 'obsidian-daily-no
 import {stringOrDate} from 'react-big-calendar';
 import {getAllLinesFromFile, safeExecute} from '@/api';
 import fileService from '@/services/fileService';
-import {globalStateService} from '@/services';
+import {globalService} from '@/services';
 
 interface MContent {
   content: string;
@@ -38,7 +38,7 @@ export async function waitForInsert(
 ): Promise<Model.Event> {
   return await safeExecute(async () => {
     const {vault} = fileService.getState().app;
-    const settings = globalStateService.getState().pluginSetting;
+    const settings = globalService.getState().pluginSetting;
     let lineNum: number;
 
     // Format the date

@@ -22,8 +22,12 @@ type StorageKey = keyof StorageData;
 /**
  * storage helper
  */
-export namespace storage {
-  export function get<T extends StorageData>(keys: StorageKey[], app: App): Partial<T> {
+export const storage = {
+  get<T extends StorageData>(keys: StorageKey[], app: App): Partial<T> {
+    if (!app) {
+      return {} as Partial<T>;
+    }
+
     const data: Partial<T> = {};
 
     for (const key of keys) {
@@ -39,9 +43,13 @@ export namespace storage {
     }
 
     return data;
-  }
+  },
 
-  export function set(data: Partial<StorageData>, app: App) {
+  set(data: Partial<StorageData>, app: App) {
+    if (!app) {
+      return;
+    }
+
     for (const key in data) {
       try {
         const stringifyValue = JSON.stringify(data[key as StorageKey]);
@@ -50,9 +58,13 @@ export namespace storage {
         console.error('Save storage failed in ', key, error);
       }
     }
-  }
+  },
 
-  export function remove(keys: StorageKey[], app: App) {
+  remove(keys: StorageKey[], app: App) {
+    if (!app) {
+      return;
+    }
+
     for (const key of keys) {
       try {
         app.saveLocalStorage(key, null);
@@ -60,14 +72,14 @@ export namespace storage {
         console.error('Remove storage failed in ', key, error);
       }
     }
-  }
+  },
 
-  export function emitStorageChangedEvent() {
+  emitStorageChangedEvent() {
     const iframeEl = document.createElement('iframe');
     iframeEl.style.display = 'none';
     document.body.appendChild(iframeEl);
 
     iframeEl.contentWindow?.localStorage.setItem('t', Date.now().toString());
     iframeEl.remove();
-  }
-}
+  },
+};

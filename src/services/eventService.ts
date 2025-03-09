@@ -112,7 +112,7 @@ class EventService {
       if (startDate && endDate && event.id && event.title) {
         return await changeEvent(
           event.id,
-          event.title,
+          event.originalContent || '',
           event.title,
           event.eventType || '',
           startDate,
@@ -158,12 +158,10 @@ class EventService {
    */
   public async updateEvent(
     eventId: string,
-    originalText: string,
     text: string,
     type: string,
     startDate: stringOrDate,
     endDate: stringOrDate,
-    originalEndDate: Date,
   ): Promise<Model.Event> {
     const event = this.getEventById(eventId);
     if (!event) {

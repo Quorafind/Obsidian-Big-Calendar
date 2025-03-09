@@ -77,7 +77,7 @@ export function parseTasksFromText(
   const tasks: Task[] = [];
 
   // Regular expressions for task detection
-  const taskRegex = /^\s*[-*] \[([ x\/\-])\]\s*(.*)/;
+  const taskRegex = /^\s*[-*] \[([ x/-])\]\s*(.*)/;
   const eventRegex = /^\s*[-*] ((\d{1,2}):(\d{2}))\s*(.*)/;
   const dueDateRegex = /📅\s*(\d{4}-\d{2}-\d{2})/;
   const tagsRegex = /#([a-zA-Z0-9_-]+)/g;

@@ -1,9 +1,9 @@
-import {normalizePath, TFolder, TFile, moment} from 'obsidian';
+import {TFolder, TFile, Notice} from 'obsidian';
 import {getAllDailyNotes, getDailyNoteSettings, getDateFromFile} from 'obsidian-daily-notes-interface';
-import {getAllLinesFromFile, extractEventTime, safeExecute} from '../api';
-import fileService from '@/services/fileService';
-import globalStateService from '@/services/globalStateService';
+import {getAllLinesFromFile, extractEventTime, safeExecute} from '@/api';
+import {fileService, globalService} from '@/services';
 import {BigCalendarSettings} from '@/setting';
+import {t} from '@/translations/helper';
 
 export class DailyNotesFolderMissingError extends Error {}
 
@@ -13,7 +13,7 @@ export async function getRemainingEvents(note: TFile): Promise<number> {
       return 0;
     }
     const {vault} = fileService.getState().app;
-    const settings = globalStateService.getState().pluginSetting;
+    const settings = globalService.getState().pluginSetting;
     const fileContents = await vault.read(note);
 
     // 创建匹配事件的正则表达式
@@ -52,7 +52,7 @@ export async function getEventsFromDailyNote(dailyNote: TFile | null, dailyEvent
       return [];
     }
     const {vault} = fileService.getState().app;
-    const settings = globalStateService.getState().pluginSetting;
+    const settings = globalService.getState().pluginSetting;
     const events = await getRemainingEvents(dailyNote);
 
     if (!events) {
@@ -94,7 +94,7 @@ export async function getEventsFromDailyNote(dailyNote: TFile | null, dailyEvent
         let eventEndMinute = minute;
 
         // 检查是否有结束时间
-        const hasEndTime = /⏲\s?(\d{1,2})\:(\d{2})/.test(line);
+        const hasEndTime = /⏲\s?(\d{1,2}):(\d{2})/.test(line);
         if (hasEndTime) {
           eventEndHour = extractEventEndHourFromLine(line);
           eventEndMinute = extractEventEndMinFromLine(line);
@@ -197,9 +197,11 @@ export async function getEvents(): Promise<any[]> {
     const {folder} = getDailyNoteSettings();
 
     // 获取日记笔记文件夹
-    const dailyNotesFolder = vault.getFolderByPath(normalizePath(folder)) as TFolder;
+    const dailyNotesFolder = vault.getFolderByPath(folder) as TFolder;
+    console.log(dailyNotesFolder);
     if (!dailyNotesFolder) {
-      throw new DailyNotesFolderMissingError('Failed to find daily notes folder');
+      new Notice(t('Your daily notes folder is not set correctly. Please check your settings.'));
+      return [];
     }
 
     // 获取所有日记笔记
@@ -262,7 +264,7 @@ const extractTextFromTodoLine = (line: string, settings: BigCalendarSettings): s
         '(.*)$',
       );
   } else {
-    regexPattern = '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s)?(\\<time\\>)?(\\d{1,2})\\:(\\d{2})(.*)$';
+    regexPattern = '^\\s*(-|\\*)\\s(\\[(.{1})\\]\\s)?(\\<time\\>)?(\\d{1,2}):(\\d{2})(.*)$';
   }
 
   const regexMatcher = new RegExp(regexPattern, '');
@@ -271,17 +273,17 @@ const extractTextFromTodoLine = (line: string, settings: BigCalendarSettings): s
 };
 
 const extractEventTaskTypeFromLine = (line: string): string | undefined => {
-  return /^\s*[\-\*]\s(\[(.{1})\])\s(.*)$/.exec(line)?.[2];
+  return /^\s*[-*]\s(\[(.{1})\])\s(.*)$/.exec(line)?.[2];
 };
 
 const extractEventEndHourFromLine = (line: string): number => {
-  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  const match = /⏲\s?(\d{1,2}):(\d{2})/.exec(line);
   return match ? parseInt(match[1]) : 0;
 };
 
 const extractEventEndMinFromLine = (line: string): number => {
-  const match = /⏲\s?(\d{1,2})\:(\d{2})/.exec(line);
+  const match = /⏲\s?(\d{1,2}):(\d{2})/.exec(line);
   return match ? parseInt(match[2]) : 0;
 };
 
-const getDueDate = (line: string) => /\s(📅|📆|(@{)|(\[due\:\:)) ?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[4];
+const getDueDate = (line: string) => /\s(📅|📆|(@{)|(\[due::)) ?(\d{4}-\d{2}-\d{2})(\])?/.exec(line)?.[4];

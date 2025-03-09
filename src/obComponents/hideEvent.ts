@@ -1,11 +1,9 @@
 import {moment} from 'obsidian';
 import {getDailyNote} from 'obsidian-daily-notes-interface';
-import fileService from '../services/fileService';
-import eventService from '../services/eventService';
-import globalStateService from '../services/globalStateService';
+import {fileService, globalService} from '@/services';
 import {sendEventToDelete} from './deleteEvent';
-import {safeExecute} from '../api';
-import {BigCalendarSettings} from '../setting';
+import {safeExecute} from '@/api';
+import {BigCalendarSettings} from '@/setting';
 
 /**
  * 隐藏事件（将事件从日记笔记中移除并发送到删除文件）
@@ -17,7 +15,7 @@ export async function hideEvent(eventid: string): Promise<any> {
   return await safeExecute(async () => {
     const {files, app} = fileService.getState();
     const {vault} = app;
-    const settings = globalStateService.getState().pluginSetting;
+    const settings = globalService.getState().pluginSetting;
 
     if (!/\d{14,}/.test(eventid)) {
       throw new Error('Invalid event ID format');

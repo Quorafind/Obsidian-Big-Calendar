@@ -7,7 +7,7 @@ class FileService {
     return useFileStore.getState();
   }
 
-  public getApp(app: App) {
+  public setApp(app: App) {
     useFileStore.getState().setApp(app);
     return app;
   }

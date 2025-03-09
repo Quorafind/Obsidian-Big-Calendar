@@ -23,4 +23,6 @@ export default {
   'If you like this plugin, consider donating to support continued development:':
     '如果你喜欢这个插件，而且也希望给我买鸡腿，那么可以考虑 Github 页面右边的 Sponsor~',
   'Close big calendar successfully': '成功关闭大日历',
+  'Your daily notes folder is not set correctly. Please check your settings.':
+    '你的日记笔记文件夹设置不正确。请检查你的设置。',
 };

@@ -28,8 +28,8 @@ export async function restoreDeletedEvent(deletedEventid: string): Promise<any[]
       throw new Error('Delete file not found');
     }
 
-    let fileContents = await vault.read(deleteFile);
-    let fileLines = getAllLinesFromFile(fileContents);
+    const fileContents = await vault.read(deleteFile);
+    const fileLines = getAllLinesFromFile(fileContents);
 
     if (fileLines.length === 0) {
       return [];
@@ -90,8 +90,8 @@ export async function deleteForever(deletedEventid: string): Promise<void> {
       return;
     }
 
-    let fileContents = await vault.read(deleteFile);
-    let fileLines = getAllLinesFromFile(fileContents);
+    const fileContents = await vault.read(deleteFile);
+    const fileLines = getAllLinesFromFile(fileContents);
 
     if (fileLines.length === 0) {
       return;
@@ -125,8 +125,8 @@ export async function getDeletedEvents(): Promise<any[]> {
       return deletedEvents;
     }
 
-    let fileContents = await vault.read(deleteFile);
-    let fileLines = getAllLinesFromFile(fileContents);
+    const fileContents = await vault.read(deleteFile);
+    const fileLines = getAllLinesFromFile(fileContents);
 
     if (fileLines.length === 0) {
       return deletedEvents;

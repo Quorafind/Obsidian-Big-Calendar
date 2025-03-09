@@ -1,9 +1,6 @@
 // Credits go to Schemar's Tasks Plugin: https://github.dev/schemar/obsidian-tasks
 
-import {moment} from 'obsidian';
 import {Recurrence} from './parseTasksRecurrence';
-// Import from our new API
-import {createDueDateRegex, safeExecute} from '../api';
 
 export enum Status {
   Todo = 'Todo',

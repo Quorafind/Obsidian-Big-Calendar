@@ -44,35 +44,99 @@ const useCalendarStore = create<CalendarState>((set, get) => ({
   isLoading: true,
 
   // Actions
-  setEvents: (events) => set({events}),
+  setEvents: (events) => {
+    // Check if the events array has actually changed
+    const currentEvents = get().events;
 
-  setCalendarView: (view) => set({calendarView: view}),
+    // Skip update if it's the same reference
+    if (events === currentEvents) {
+      return;
+    }
 
-  setCalendarDate: (date) => set({calendarDate: date}),
-
-  setSelectable: (selectable) => set({selectable}),
-
-  setResizable: (resizable) => set({resizable}),
-
-  setCalendarPopup: (popup) => set({calendarPopup: popup}),
-
-  setStartDay: (startDay) => {
-    set({startDay});
-
-    // Update moment locale based on start day
-    if (startDay === 'sunday') {
-      moment.updateLocale('en', {week: {dow: 0}});
-    } else {
-      moment.updateLocale('en', {week: {dow: 1}});
+    // Update only if there's a meaningful change
+    if (events.length !== currentEvents.length || JSON.stringify(events) !== JSON.stringify(currentEvents)) {
+      set({events});
     }
   },
 
-  setLoading: (isLoading) => set({isLoading}),
+  setCalendarView: (view) => {
+    // Only update if the view has changed
+    if (get().calendarView !== view) {
+      set({calendarView: view});
+    }
+  },
 
-  updateEvent: (eventId, updates) =>
-    set((state) => ({
-      events: state.events.map((event) => (event.id === eventId ? {...event, ...updates} : event)),
-    })),
+  setCalendarDate: (date) => {
+    // Only update if the date has changed
+    const currentDate = get().calendarDate;
+    if (!currentDate || !date || currentDate.getTime() !== date.getTime()) {
+      set({calendarDate: date});
+    }
+  },
+
+  setSelectable: (selectable) => {
+    // Only update if the value has changed
+    if (get().selectable !== selectable) {
+      set({selectable});
+    }
+  },
+
+  setResizable: (resizable) => {
+    // Only update if the value has changed
+    if (get().resizable !== resizable) {
+      set({resizable});
+    }
+  },
+
+  setCalendarPopup: (popup) => {
+    // Only update if the value has changed
+    if (get().calendarPopup !== popup) {
+      set({calendarPopup: popup});
+    }
+  },
+
+  setStartDay: (startDay) => {
+    // Only update if the value has changed
+    if (get().startDay !== startDay) {
+      set({startDay});
+
+      // Update moment locale based on start day
+      if (startDay === 'sunday') {
+        moment.updateLocale('en', {week: {dow: 0}});
+      } else {
+        moment.updateLocale('en', {week: {dow: 1}});
+      }
+    }
+  },
+
+  setLoading: (isLoading) => {
+    // Only update if the value has changed
+    if (get().isLoading !== isLoading) {
+      set({isLoading});
+    }
+  },
+
+  updateEvent: (eventId, updates) => {
+    // Get current events
+    const events = get().events;
+
+    // Find the event to update
+    const eventIndex = events.findIndex((event) => event.id === eventId);
+
+    // If event not found, do nothing
+    if (eventIndex === -1) {
+      return;
+    }
+
+    // Create new array with updated event
+    const updatedEvents = [...events];
+    updatedEvents[eventIndex] = {
+      ...updatedEvents[eventIndex],
+      ...updates,
+    };
+
+    set({events: updatedEvents});
+  },
 
   // Storage-related actions
   saveCalendarView: (app) => {
@@ -99,7 +163,9 @@ const useCalendarStore = create<CalendarState>((set, get) => ({
       const viewString = app.loadLocalStorage('viewCache');
       if (viewString) {
         const view = JSON.parse(viewString) as View;
-        set({calendarView: view});
+        if (view !== get().calendarView) {
+          set({calendarView: view});
+        }
       }
 
       // Load date
@@ -107,7 +173,10 @@ const useCalendarStore = create<CalendarState>((set, get) => ({
       if (dateString) {
         const date = new Date(JSON.parse(dateString));
         if (!isNaN(date.getTime())) {
-          set({calendarDate: date});
+          const currentDate = get().calendarDate;
+          if (!currentDate || currentDate.getTime() !== date.getTime()) {
+            set({calendarDate: date});
+          }
         }
       }
     } catch (error) {

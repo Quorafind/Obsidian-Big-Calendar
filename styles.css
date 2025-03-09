@@ -459,6 +459,7 @@
   flex: none;
   padding-right: 5px;
   width: auto;
+  display: none;
 }
 .theme-light .rbc-day-slot .rbc-event-content {
   width: 100%;
@@ -1145,6 +1146,7 @@
   flex: none;
   padding-right: 5px;
   width: auto;
+  display: none;
 }
 .theme-dark .rbc-day-slot .rbc-event-content {
   width: 100%;

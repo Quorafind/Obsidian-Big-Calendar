@@ -70,14 +70,7 @@ export class BigCalendar extends ItemView {
     this.registerEvent(this.app.vault.on('create', this.onFileCreated));
     this.registerEvent(this.app.vault.on('delete', this.onFileDeleted));
     this.registerEvent(this.app.vault.on('modify', this.onFileModified));
-    // this.registerEvent(this.app.vault.on('closed', this.onCalendarClose));
 
-    // appStore.getState();
-    fileService.getApp(this.app);
-    fileService.getAllFiles();
-    eventService.fetchAllEvents();
-
-    // Create root for React 18
     this.root = ReactDOM.createRoot(this.contentEl);
     this.root.render(
       <React.StrictMode>

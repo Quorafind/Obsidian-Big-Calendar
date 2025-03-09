@@ -47,7 +47,6 @@ class LocationService {
   };
 
   public clearQuery = () => {
-    const locationState = this.getState();
     useLocationStore.getState().setQuery({
       tag: '',
       duration: null,

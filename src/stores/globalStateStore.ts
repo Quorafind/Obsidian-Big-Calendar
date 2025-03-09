@@ -53,10 +53,9 @@ const useGlobalStateStore = create<GlobalState>((set) => ({
     })),
 
   setPluginSetting: (pluginSetting) =>
-    set((state) => ({
-      ...state,
-      ...pluginSetting,
-    })),
+    set((state) => {
+      return {...state, pluginSetting: pluginSetting};
+    }),
 }));
 
 export default useGlobalStateStore;
