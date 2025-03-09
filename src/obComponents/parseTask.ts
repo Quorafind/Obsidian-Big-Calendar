@@ -1,7 +1,7 @@
 // Credits go to Schemar's Tasks Plugin: https://github.dev/schemar/obsidian-tasks
 
-import {Moment} from '_obsidian@0.13.11@obsidian/node_modules/moment';
-import {Recurrence} from './obParseTasksRecurrence';
+import {moment} from 'obsidian';
+import {Recurrence} from './parseTasksRecurrence';
 
 export enum Status {
   Todo = 'Todo',
@@ -19,10 +19,10 @@ export class Task {
   public readonly originalStatusCharacter: string;
   public readonly precedingHeader: string | null;
 
-  public readonly startDate: Moment | null;
-  public readonly scheduledDate: Moment | null;
-  public readonly dueDate: Moment | null;
-  public readonly doneDate: Moment | null;
+  public readonly startDate: moment.Moment | null;
+  public readonly scheduledDate: moment.Moment | null;
+  public readonly dueDate: moment.Moment | null;
+  public readonly doneDate: moment.Moment | null;
 
   public readonly recurrence: Recurrence | null;
   /** The blockLink is a "^" annotation after the dates/recurrence rules. */
@@ -97,10 +97,10 @@ export class Task {
     // description in any order. The loop should only run once if the
     // strings are in the expected order after the description.
     let matched: boolean;
-    let startDate: Moment | null = null;
-    let scheduledDate: Moment | null = null;
-    let dueDate: Moment | null = null;
-    let doneDate: Moment | null = null;
+    let startDate: moment.Moment | null = null;
+    let scheduledDate: moment.Moment | null = null;
+    let dueDate: moment.Moment | null = null;
+    let doneDate: moment.Moment | null = null;
     let recurrence: Recurrence | null = null;
     // Add a "max runs" failsafe to never end in an endless loop:
     const maxRuns = 7;

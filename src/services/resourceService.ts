@@ -3,7 +3,7 @@
 import {moment} from 'obsidian';
 import {TFile} from 'obsidian';
 import {createDailyNote, getAllDailyNotes, getDailyNote} from 'obsidian-daily-notes-interface';
-import useDailyNotesStore from '../stores/dailyNotesStore';
+import useDailyNotesStore from '../stores/fileStore';
 // import dailyNotesService from './dailyNotesService';
 
 // interface FileData {

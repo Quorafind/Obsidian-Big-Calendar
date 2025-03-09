@@ -1,5 +1,5 @@
 import {moment} from 'obsidian';
-import dailyNotesService from '../services/dailyNotesService';
+import dailyNotesService from '../services/fileService';
 import {Platform} from 'obsidian';
 
 export const showEventInDailyNotes = async (eventId: string): Promise<any> => {
@@ -13,7 +13,7 @@ export const showEventInDailyNotes = async (eventId: string): Promise<any> => {
   // const file = getDailyNote(date, dailyNotes);
   const file = await dailyNotesService.getDailyNoteByEvent(date);
   if (!Platform.isMobile) {
-    const leaf = app.workspace.splitActiveLeaf();
+    const leaf = app.workspace.getLeaf(true);
     leaf.openFile(file, {eState: {line: lineNum}});
   } else {
     let leaf = app.workspace.activeLeaf;

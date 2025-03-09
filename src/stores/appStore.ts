@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import useDailyNotesStore from './dailyNotesStore';
+import useDailyNotesStore from './fileStore';
 import useEventStore from './eventStore';
 import useGlobalStateStore from './globalStateStore';
 import useLocationStore from './locationStore';

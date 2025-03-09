@@ -18,5 +18,4 @@ const routerSwitch = (router: Router) => {
   };
 };
 
-// export const appRouterSwitch = routerSwitch(appRouter);
 export const homeRouterSwitch = routerSwitch(homeRouter);

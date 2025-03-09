@@ -1,10 +1,13 @@
 import useEventStore from '../stores/eventStore';
-import {waitForInsert} from '../obComponents/obCreateEvent';
-import {changeEvent} from '../obComponents/obUpdateEvent';
-import api from '../helpers/api';
+import {waitForInsert} from '../obComponents/createEvent';
+import {changeEvent} from '../obComponents/updateEvent';
+import api from '../utils/api';
 // import userService from "./userService";
 import {stringOrDate} from 'react-big-calendar';
-import {deleteForever} from '../obComponents/obDeleteEvent';
+import {deleteForever} from '../obComponents/deleteEvent';
+import fileService from './fileService';
+import {parseEventInfoFromLine, getAllLinesFromFile, lineContainsEvent} from '../utils/fileParser';
+import {TFile} from 'obsidian';
 
 class EventService {
   public initialized = false;
@@ -38,6 +41,8 @@ class EventService {
     useEventStore.getState().insertEvent({
       ...event,
     });
+
+    return event;
   }
 
   public getEventById(id: string) {
@@ -145,6 +150,108 @@ class EventService {
       startDate,
       endDate,
     );
+  }
+
+  /**
+   * Parse an event from a line of text
+   *
+   * @param line The line to parse
+   * @returns Partial event object with extracted information
+   */
+  public parseEventFromLine(line: string): Partial<Model.Event> | null {
+    if (!lineContainsEvent(line)) {
+      return null;
+    }
+
+    const eventInfo = parseEventInfoFromLine(line);
+    if (!eventInfo.hasEvent) {
+      return null;
+    }
+
+    const result: Partial<Model.Event> = {
+      title: line.trim(),
+    };
+
+    // Add date information if available
+    if (eventInfo.date?.hasDate && eventInfo.date.rawDate) {
+      const dateStr = eventInfo.date.rawDate;
+      result.start = new Date(dateStr);
+      result.end = new Date(dateStr);
+    }
+
+    // Add time information if available
+    if (eventInfo.time) {
+      const {hour, minute} = eventInfo.time;
+
+      if (result.start) {
+        result.start.setHours(hour, minute, 0, 0);
+      }
+
+      if (result.end) {
+        // Default end time is 1 hour after start
+        result.end.setHours(hour + 1, minute, 0, 0);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Update an event in a file
+   *
+   * @param eventId ID of the event to update
+   * @param content New content for the event
+   * @returns Promise resolving to void
+   */
+  public async updateEventInFile(
+    eventId: string,
+    content: string,
+    eventType: string,
+    eventStartDate: stringOrDate,
+    eventEndDate: stringOrDate,
+    originalEndDate: Date,
+  ): Promise<Model.Event> {
+    return await changeEvent(
+      eventId,
+      '', // originalContent (this might need to be filled in)
+      content,
+      eventType,
+      eventStartDate,
+      eventEndDate,
+      originalEndDate,
+    );
+  }
+
+  /**
+   * Create an event in a file
+   *
+   * @param content Content for the new event
+   * @param date Date for the event
+   * @returns Promise resolving to the event ID
+   */
+  public async createEventInFile(content: string, date: Date): Promise<string> {
+    const result = await waitForInsert(content, date, '');
+    return typeof result === 'string' ? result : result.id.toString();
+  }
+
+  /**
+   * Delete an event from a file
+   *
+   * @param eventId ID of the event to delete
+   * @returns Promise resolving to void
+   */
+  public async deleteEventFromFile(eventId: string): Promise<void> {
+    await deleteForever(eventId);
+  }
+
+  /**
+   * Get the file associated with an event
+   *
+   * @param eventId ID of the event
+   * @returns The TFile object or null if not found
+   */
+  public getEventFile(eventId: string): TFile | null {
+    return fileService.getFile(eventId);
   }
 }
 

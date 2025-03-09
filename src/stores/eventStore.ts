@@ -1,4 +1,4 @@
-import utils from '../helpers/utils';
+import utils from '../utils/utils';
 import {create} from 'zustand';
 
 // Define the state interface

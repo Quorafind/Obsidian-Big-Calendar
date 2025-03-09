@@ -1,10 +1,9 @@
 import {moment} from 'obsidian';
 import {getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
 // import appStore from "../stores/appStore";
-import dailyNotesService from '../services/dailyNotesService';
+import dailyNotesService from '../services/fileService';
 import {TFile} from 'obsidian';
-import appStore from '../stores/appStore';
-import {waitForInsert} from './obCreateEvent';
+import {waitForInsert} from './createEvent';
 import {stringOrDate} from 'react-big-calendar';
 
 export async function changeEvent(
@@ -16,8 +15,7 @@ export async function changeEvent(
   eventEndDate: stringOrDate,
   originalEndDate: Date,
 ): Promise<Model.Event> {
-  const {dailyNotes} = dailyNotesService.getState();
-  const {vault} = appStore.getState().dailyNotesState.app;
+  const {files, app} = dailyNotesService.getState();
   const idString = parseInt(eventid.slice(14));
 
   const haveEndTime = /⏲\s(\d{1,2}):(\d{2})/.test(originalContent);
@@ -26,8 +24,8 @@ export async function changeEvent(
   const originalStartDate = moment(startTimeString, 'YYYYMMDDHHmmSS');
   const originalEndDateMoment = moment(originalEndDate);
 
-  const dailyNote = getDailyNote(originalStartDate, dailyNotes);
-  const fileContent = await vault.read(dailyNote);
+  const dailyNote = getDailyNote(originalStartDate, files);
+  const fileContent = await app.vault.read(dailyNote);
   const fileLines = getAllLinesFromFile(fileContent);
 
   const removeCRLF = content.replace(/\n/g, '<br>');
@@ -140,7 +138,7 @@ export async function changeEvent(
         // .replace(/⏲️ (\d{1,2})\:(\d{2})/, '⏲️ ' + eventEndHour + ':' + eventEndMin);
 
         const newFileContent = fileContent.replace(fileLines[idString], newLine);
-        await vault.modify(dailyNote, newFileContent);
+        await app.vault.modify(dailyNote, newFileContent);
         return {
           id: newEventId,
           title: removeCRLF,
@@ -159,12 +157,12 @@ export async function changeEvent(
         // const eventStartMin = eventStartMoment.format('mm');
         // const startEventDate = eventStartMoment.hour(parseInt(eventStartHour)).minute(parseInt(eventStartMin)).toDate();
         const replaceFileContent = fileContent.replace(fileLines[idString], '');
-        await vault.modify(dailyNote, replaceFileContent);
+        await app.vault.modify(dailyNote, replaceFileContent);
         return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
       } else {
         // const newLine = fileLines[idString].replace(originalContent, '- [ ] ' + moment(eventDate).format('HH:mm') + ' ' + removeEnter);
         const newFileContent = fileContent.replace(fileLines[idString], '');
-        await vault.modify(dailyNote, newFileContent);
+        await app.vault.modify(dailyNote, newFileContent);
         return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
         // return {
         //   id: newEventId,
@@ -272,7 +270,7 @@ export async function changeEvent(
           }
         }
         const newFileContent = fileContent.replace(fileLines[idString], newLine);
-        await vault.modify(dailyNote, newFileContent);
+        await app.vault.modify(dailyNote, newFileContent);
         return {
           id: newEventId,
           title: removeCRLF,
@@ -294,12 +292,12 @@ export async function changeEvent(
         // const endEventDate = eventEndMoment.toDate();
 
         const replaceFileContent = fileContent.replace(fileLines[idString], '');
-        await vault.modify(dailyNote, replaceFileContent);
+        await app.vault.modify(dailyNote, replaceFileContent);
         return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
       } else {
         // const newLine = fileLines[idString].replace(originalContent, '- [ ] ' + moment(eventDate).format('HH:mm') + ' ' + removeEnter);
         const newFileContent = fileContent.replace(fileLines[idString], '');
-        await vault.modify(dailyNote, newFileContent);
+        await app.vault.modify(dailyNote, newFileContent);
         return await waitForInsert(removeCRLF, eventStartDate, eventEndDate);
         // return {
         //   id: newEventId,
@@ -314,10 +312,10 @@ export async function changeEvent(
 }
 
 export function getFile(eventid: string): TFile {
-  const {dailyNotes} = dailyNotesService.getState();
+  const {files} = dailyNotesService.getState();
   const timeString = eventid.slice(0, 14);
   const changeDate = moment(timeString, 'YYYYMMDDHHmmss');
-  const dailyNote = getDailyNote(changeDate, dailyNotes);
+  const dailyNote = getDailyNote(changeDate, files);
   return dailyNote;
 }
 

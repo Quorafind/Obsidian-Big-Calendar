@@ -1,4 +1,4 @@
-import {moment} from 'obsidian';
+import {moment, Platform} from 'obsidian';
 
 namespace utils {
   export function getNowTimeStamp(): number {
@@ -6,73 +6,7 @@ namespace utils {
   }
 
   export function getOSVersion(): 'Windows' | 'MacOS' | 'Linux' | 'Unknown' {
-    const appVersion = navigator.userAgent;
-    let detectedOS: 'Windows' | 'MacOS' | 'Linux' | 'Unknown' = 'Unknown';
-
-    if (appVersion.indexOf('Win') != -1) {
-      detectedOS = 'Windows';
-    } else if (appVersion.indexOf('Mac') != -1) {
-      detectedOS = 'MacOS';
-    } else if (appVersion.indexOf('Linux') != -1) {
-      detectedOS = 'Linux';
-    }
-
-    return detectedOS;
-  }
-
-  export function getTimeStampByDate(t: Date | number | string): number {
-    if (typeof t === 'string') {
-      t = t.replaceAll('-', '/');
-    }
-    return new Date(t).getTime();
-  }
-
-  export function getDateStampByDate(t: Date | number | string): number {
-    const d = new Date(getTimeStampByDate(t));
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  }
-
-  export function getDateString(t: Date | number | string): string {
-    const d = new Date(getTimeStampByDate(t));
-
-    const year = d.getFullYear();
-    const month = d.getMonth() + 1;
-    const date = d.getDate();
-
-    return `${year}/${month}/${date}`;
-  }
-
-  export function getTimeString(t: Date | number | string): string {
-    const d = new Date(getTimeStampByDate(t));
-
-    const hours = d.getHours();
-    const mins = d.getMinutes();
-
-    const hoursStr = hours < 10 ? '0' + hours : hours;
-    const minsStr = mins < 10 ? '0' + mins : mins;
-
-    return `${hoursStr}:${minsStr}`;
-  }
-
-  // For example: 2021-4-8 17:52:17
-  export function getDateTimeString(t: Date | number | string): string {
-    const d = new Date(getTimeStampByDate(t));
-
-    const year = d.getFullYear();
-    const month = d.getMonth() + 1;
-    const date = d.getDate();
-    const hours = d.getHours();
-    const mins = d.getMinutes();
-    // const secs = d.getSeconds();
-
-    const monthStr = month < 10 ? '0' + month : month;
-    const dateStr = date < 10 ? '0' + date : date;
-    const hoursStr = hours < 10 ? '0' + hours : hours;
-    const minsStr = mins < 10 ? '0' + mins : mins;
-    // const secsStr = secs < 10 ? "0" + secs : secs;
-    const secsStr = '00';
-
-    return `${year}/${monthStr}/${dateStr} ${hoursStr}:${minsStr}:${secsStr}`;
+    return Platform.isDesktop ? (Platform.isWin ? 'Windows' : Platform.isMacOS ? 'MacOS' : 'Linux') : 'Unknown';
   }
 
   export function dedupe<T>(data: T[]): T[] {
@@ -91,34 +25,6 @@ namespace utils {
     }
 
     return result;
-  }
-
-  export function debounce(fn: FunctionType, delay: number) {
-    let timer: number | null = null;
-
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-        timer = setTimeout(fn, delay);
-      } else {
-        timer = setTimeout(fn, delay);
-      }
-    };
-  }
-
-  export function throttle(fn: FunctionType, delay: number) {
-    let valid = true;
-
-    return () => {
-      if (!valid) {
-        return false;
-      }
-      valid = false;
-      setTimeout(() => {
-        fn();
-        valid = true;
-      }, delay);
-    };
   }
 
   export function transformObjectToParamsString(object: KVObject): string {

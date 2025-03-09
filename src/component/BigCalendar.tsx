@@ -3,16 +3,16 @@ import {dailyNotesService, eventService} from '../services';
 import {Notice} from 'obsidian';
 import CalendarComponent, {EventRefActions} from './Calendar/Calendar';
 import {View, SlotInfo} from 'react-big-calendar';
-import Only from './common/OnlyWhen';
-import {showEventInDailyNotes} from '../obComponents/obShowEvent';
-import {StartDate} from '../bigCalendar';
+import {showEventInDailyNotes} from '../obComponents/showEvent';
 import {useEvents} from '../hooks/useStore';
+import useGlobalStateStore from 'src/stores/globalStateStore';
 
 interface Props {}
 
 const BigCalendar: React.FC<Props> = () => {
   // 使用 Zustand hook 来获取事件数据
   const events = useEvents();
+  const settings = useGlobalStateStore((state) => state.pluginSetting);
   const [isFetching, setFetchStatus] = useState(false);
   const eventRef = useRef<EventRefActions>(null);
 

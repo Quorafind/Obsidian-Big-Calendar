@@ -2,10 +2,10 @@ import {moment} from 'obsidian';
 import {getDailyNote} from 'obsidian-daily-notes-interface';
 import {DefaultEventComposition} from '../bigCalendar';
 // import appStore from "../stores/appStore";
-import dailyNotesService from '../services/dailyNotesService';
+import dailyNotesService from '../services/fileService';
 // import { TFile } from "obsidian";
 import appStore from '../stores/appStore';
-import {sendEventToDelete} from './obDeleteEvent';
+import {sendEventToDelete} from './deleteEvent';
 
 export async function obHideEvent(eventid: string): Promise<Model.Event> {
   const {dailyNotes} = dailyNotesService.getState();
@@ -36,7 +36,8 @@ const extractContentfromText = (line: string) => {
     /{CONTENT}/g.test(DefaultEventComposition)
   ) {
     //eslint-disable-next-line
-    regexMatch = '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?' +
+    regexMatch =
+      '^\\s*[\\-\\*]\\s(\\[(.{1})\\]\\s?)?' +
       DefaultEventComposition.replace(/{TIME}/g, '(\\<time\\>)?((\\d{1,2})\\:(\\d{2}))?(\\<\\/time\\>)?').replace(
         /{CONTENT}/g,
         '(.*)$',

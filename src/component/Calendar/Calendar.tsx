@@ -1,5 +1,5 @@
 import {forwardRef, ReactNode, useCallback, useContext, useEffect, useImperativeHandle, useMemo, useRef} from 'react';
-import {storage, remove} from '../../helpers/storage';
+import {storage, remove} from '../../utils/storage';
 // import useRefresh from '../../hooks/useRefresh';
 import '../../less/Calendar.less';
 import React from 'react';
@@ -9,7 +9,7 @@ import React from 'react';
 import {Calendar, Event, momentLocalizer, SlotInfo, View} from 'react-big-calendar';
 import {moment} from 'obsidian';
 import withDragAndDrop, {withDragAndDropProps} from 'react-big-calendar/lib/addons/dragAndDrop';
-import dailyNotesService from '../../services/dailyNotesService';
+import dailyNotesService from '../../services/fileService';
 import GenericInputPrompt from '../../obComponents/GenericInputPrompt';
 import Only from '../common/OnlyWhen';
 import useState from 'react-usestateref';
@@ -264,7 +264,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
         // existingEvent = await changeEvent((existingEvent as Model.Event).id,(existingEvent as Model.Event).originalContent, (existingEvent as Model.Event).title, (existingEvent as Model.Event).eventType, data.start, data.end, (existingEvent as Model.Event).end);
         console.log(existingEvent);
       }
-      
+
       return existingEvent;
     });
     setNewEvents(nextEvents);

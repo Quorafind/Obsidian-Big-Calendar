@@ -1,6 +1,5 @@
 import React from 'react';
-import BigCalendar from '../component/bigCalendar';
-// import Dnd from '../component/Calendar/Calendar';
+import BigCalendar from '../component/BigCalendar';
 
 const homeRouter = {
   '*': <BigCalendar />,

@@ -1,13 +1,13 @@
 // Credits go to Schemar's Tasks Plugin: https://github.dev/schemar/obsidian-tasks
 
-import {Moment} from '_obsidian@0.13.11@obsidian/node_modules/moment';
+import {moment} from 'obsidian';
 import {RRule} from 'rrule';
 
 export class Recurrence {
   private readonly rrule: RRule;
-  private readonly startDate: Moment | null;
-  private readonly scheduledDate: Moment | null;
-  private readonly dueDate: Moment | null;
+  private readonly startDate: moment.Moment | null;
+  private readonly scheduledDate: moment.Moment | null;
+  private readonly dueDate: moment.Moment | null;
 
   /**
    * The reference date is used to calculate future occurences.
@@ -22,7 +22,7 @@ export class Recurrence {
    * same relative distance to the due date as the original task. For example
    * "starts one week before it is due".
    */
-  private readonly referenceDate: Moment | null;
+  private readonly referenceDate: moment.Moment | null;
 
   constructor({
     rrule,
@@ -32,10 +32,10 @@ export class Recurrence {
     dueDate,
   }: {
     rrule: RRule;
-    referenceDate: Moment | null;
-    startDate: Moment | null;
-    scheduledDate: Moment | null;
-    dueDate: Moment | null;
+    referenceDate: moment.Moment | null;
+    startDate: moment.Moment | null;
+    scheduledDate: moment.Moment | null;
+    dueDate: moment.Moment | null;
   }) {
     this.rrule = rrule;
     this.referenceDate = referenceDate;
@@ -51,27 +51,27 @@ export class Recurrence {
     dueDate,
   }: {
     recurrenceRuleText: string;
-    startDate: Moment | null;
-    scheduledDate: Moment | null;
-    dueDate: Moment | null;
+    startDate: moment.Moment | null;
+    scheduledDate: moment.Moment | null;
+    dueDate: moment.Moment | null;
   }): Recurrence | null {
     try {
       const options = RRule.parseText(recurrenceRuleText);
       if (options !== null) {
         // Pick the reference date for recurrence based on importance.
         // Assuming due date has the highest priority.
-        let referenceDate: Moment | null = null;
+        let referenceDate: moment.Moment | null = null;
         // Clone the moment objects.
         if (dueDate) {
-          referenceDate = window.moment(dueDate);
+          referenceDate = moment(dueDate);
         } else if (scheduledDate) {
-          referenceDate = window.moment(scheduledDate);
+          referenceDate = moment(scheduledDate);
         } else if (startDate) {
-          referenceDate = window.moment(startDate);
+          referenceDate = moment(startDate);
         }
 
         if (referenceDate !== null) {
-          options.dtstart = window.moment(referenceDate).startOf('day').utc(true).toDate();
+          options.dtstart = moment(referenceDate).startOf('day').utc(true).toDate();
         }
 
         const rrule = new RRule(options);
@@ -98,18 +98,18 @@ export class Recurrence {
    * Returns the dates of the next occurrence or null if there is no next occurrence.
    */
   public next(): {
-    startDate: Moment | null;
-    scheduledDate: Moment | null;
-    dueDate: Moment | null;
+    startDate: moment.Moment | null;
+    scheduledDate: moment.Moment | null;
+    dueDate: moment.Moment | null;
   } | null {
     // The next occurrence should happen based on the original reference
     // date if possible. Otherwise, base it on today.
-    let after: Moment;
+    let after: moment.Moment;
     if (this.referenceDate !== null) {
       // Clone to not alter the original reference date.
-      after = window.moment(this.referenceDate);
+      after = moment(this.referenceDate);
     } else {
-      after = window.moment();
+      after = moment();
     }
 
     after.endOf('day');
@@ -119,23 +119,23 @@ export class Recurrence {
 
     if (next !== null) {
       // Re-add the timezone that RRule disregarded:
-      const localTimeZone = window.moment.utc(next).local(true);
+      const localTimeZone = moment.utc(next).local(true);
       const nextOccurrence = localTimeZone.startOf('day');
 
       // Keep the relative difference between the reference date and
       // start/scheduled/due.
-      let startDate: Moment | null = null;
-      let scheduledDate: Moment | null = null;
-      let dueDate: Moment | null = null;
+      let startDate: moment.Moment | null = null;
+      let scheduledDate: moment.Moment | null = null;
+      let dueDate: moment.Moment | null = null;
 
       // Only if a reference date is given. A reference date will exist if at
       // least one of the other dates is set.
       if (this.referenceDate) {
         if (this.startDate) {
-          const originalDifference = window.moment.duration(this.startDate.diff(this.referenceDate));
+          const originalDifference = moment.duration(this.startDate.diff(this.referenceDate));
 
           // Cloning so that original won't be manipulated:
-          startDate = window.moment(nextOccurrence);
+          startDate = moment(nextOccurrence);
           // Rounding days to handle cross daylight-savings-time recurrences.
           startDate.add(Math.round(originalDifference.asDays()), 'days');
         }

@@ -1,3 +1,4 @@
+import {BigCalendarSettings} from 'src/setting';
 import {create} from 'zustand';
 
 export interface AppSetting {
@@ -13,12 +14,16 @@ export interface GlobalState extends AppSetting {
   isMobileView: boolean;
   showSiderbarInMobileView: boolean;
 
+  pluginSetting: BigCalendarSettings;
+
   // Actions
   setMarkEventId: (markEventId: string) => void;
   setEditEventId: (editEventId: string) => void;
   setMobileView: (isMobileView: boolean) => void;
   setShowSiderbarInMobileView: (showSiderbarInMobileView: boolean) => void;
   setAppSetting: (appSetting: Partial<AppSetting>) => void;
+
+  setPluginSetting: (pluginSetting: BigCalendarSettings) => void;
 }
 
 const useGlobalStateStore = create<GlobalState>((set) => ({
@@ -31,6 +36,7 @@ const useGlobalStateStore = create<GlobalState>((set) => ({
   useTinyUndoHistoryCache: false,
   isMobileView: false,
   showSiderbarInMobileView: false,
+  pluginSetting: null,
 
   // Actions
   setMarkEventId: (markEventId) => set((state) => (markEventId === state.markEventId ? state : {markEventId})),
@@ -46,6 +52,12 @@ const useGlobalStateStore = create<GlobalState>((set) => ({
     set((state) => ({
       ...state,
       ...appSetting,
+    })),
+
+  setPluginSetting: (pluginSetting) =>
+    set((state) => ({
+      ...state,
+      ...pluginSetting,
     })),
 }));
 

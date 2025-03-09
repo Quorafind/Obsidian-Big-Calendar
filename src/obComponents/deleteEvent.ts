@@ -1,9 +1,9 @@
-import {getDailyNotePath} from './obUpdateEvent';
+import {getDailyNotePath} from './updateEvent';
 import {TFile, normalizePath, Notice} from 'obsidian';
 import {moment} from 'obsidian';
 import appStore from '../stores/appStore';
 import {createDailyNote, getAllDailyNotes, getDailyNote} from 'obsidian-daily-notes-interface';
-import {insertAfterHandler} from './obCreateEvent';
+import {insertAfterHandler} from './createEvent';
 import {InsertAfter} from '../bigCalendar';
 
 export async function restoreDeletedEvent(deletedEventid: string): Promise<any[]> {

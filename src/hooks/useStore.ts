@@ -1,5 +1,5 @@
 import useAppStore, {stores} from '../stores/appStore';
-import useDailyNotesStore from '../stores/dailyNotesStore';
+import useDailyNotesStore from '../stores/fileStore';
 import useEventStore from '../stores/eventStore';
 import useGlobalStateStore from '../stores/globalStateStore';
 import useLocationStore from '../stores/locationStore';

@@ -1,4 +1,5 @@
-import {storage} from '../helpers/storage';
+import {BigCalendarSettings} from 'src/setting';
+import {storage} from '../utils/storage';
 import useGlobalStateStore, {AppSetting} from '../stores/globalStateStore';
 
 class GlobalStateService {
@@ -36,6 +37,11 @@ class GlobalStateService {
   public setAppSetting = (appSetting: Partial<AppSetting>) => {
     useGlobalStateStore.getState().setAppSetting(appSetting);
     storage.set(appSetting);
+  };
+
+  public setPluginSetting = (pluginSetting: BigCalendarSettings) => {
+    useGlobalStateStore.getState().setPluginSetting(pluginSetting);
+    // storage.set(pluginSetting);
   };
 }
 

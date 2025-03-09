@@ -1,4 +1,4 @@
-import dailyNotesService from './dailyNotesService';
+import dailyNotesService from './fileService';
 import globalStateService from './globalStateService';
 import locationService from './locationService';
 import eventService from './eventService';

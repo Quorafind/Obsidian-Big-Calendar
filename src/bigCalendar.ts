@@ -8,8 +8,6 @@ import App from './App';
 import type BigCalendarPlugin from './index';
 import {dailyNotesService, eventService} from './services';
 import {getDateFromFile} from 'obsidian-daily-notes-interface';
-// import {storage} from './helpers/storage';
-// import {pushNewEvents} from './obComponents/obGetEvents';
 
 export class BigCalendar extends ItemView {
   plugin: BigCalendarPlugin;
@@ -66,10 +64,10 @@ export class BigCalendar extends ItemView {
     }
   }
 
-//   private onCalendarClose() {
-//     storage.remove(['currentDate']);
-//     // Nothing to clean up.
-//   }
+  //   private onCalendarClose() {
+  //     storage.remove(['currentDate']);
+  //     // Nothing to clean up.
+  //   }
 
   async onOpen(): Promise<void> {
     this.onEventsSettingsUpdate = this.onEventsSettingsUpdate.bind(this);
@@ -87,16 +85,11 @@ export class BigCalendar extends ItemView {
     this.registerEvent(this.app.vault.on('modify', this.onFileModified));
     // this.registerEvent(this.app.vault.on('closed', this.onCalendarClose));
 
-	// appStore.getState();
+    // appStore.getState();
     dailyNotesService.getApp(this.app);
-	eventService.fetchAllEvents();
-	dailyNotesService.getMyAllDailyNotes();
-	dailyNotesService.getState();
-
-    InsertAfter = this.plugin.settings.InsertAfter;
-    StartDate = this.plugin.settings.StartDate;
-    DefaultEventComposition = this.plugin.settings.DefaultEventComposition;
-    ProcessEntriesBelow = this.plugin.settings.ProcessEntriesBelow;
+    eventService.fetchAllEvents();
+    dailyNotesService.getMyAllDailyNotes();
+    dailyNotesService.getState();
 
     this.bigCalendarComponent = React.createElement(App);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -108,8 +101,3 @@ export class BigCalendar extends ItemView {
     // Nothing to clean up.
   }
 }
-
-export let InsertAfter: string;
-export let StartDate: string;
-export let DefaultEventComposition: string;
-export let ProcessEntriesBelow: string;

@@ -1,5 +1,5 @@
-import { View } from "react-big-calendar";
-
+import {View} from 'react-big-calendar';
+import {App} from 'obsidian';
 
 /**
  * Define storage data type
@@ -7,8 +7,6 @@ import { View } from "react-big-calendar";
 interface StorageData {
   // 编辑器输入缓存内容
   editorContentCache: string;
-  // 分词开关
-  shouldSplitEventWord: boolean;
   // 是否隐藏图片链接地址
   shouldHideImageUrl: boolean;
   // markdown 解析开关
@@ -25,12 +23,12 @@ type StorageKey = keyof StorageData;
  * storage helper
  */
 export namespace storage {
-  export function get(keys: StorageKey[]): Partial<StorageData> {
+  export function get(keys: StorageKey[], app: App): Partial<StorageData> {
     const data: Partial<StorageData> = {};
 
     for (const key of keys) {
       try {
-        const stringifyValue = localStorage.getItem(key);
+        const stringifyValue = app.loadLocalStorage(key);
         if (stringifyValue !== null) {
           const val = JSON.parse(stringifyValue);
           data[key] = val;
@@ -43,21 +41,21 @@ export namespace storage {
     return data;
   }
 
-  export function set(data: Partial<StorageData>) {
+  export function set(data: Partial<StorageData>, app: App) {
     for (const key in data) {
       try {
         const stringifyValue = JSON.stringify(data[key as StorageKey]);
-        localStorage.setItem(key, stringifyValue);
+        app.saveLocalStorage(key, stringifyValue);
       } catch (error: any) {
         console.error('Save storage failed in ', key, error);
       }
     }
   }
 
-  export function remove(keys: StorageKey[]) {
+  export function remove(keys: StorageKey[], app: App) {
     for (const key of keys) {
       try {
-        localStorage.removeItem(key);
+        app.saveLocalStorage(key, null);
       } catch (error: any) {
         console.error('Remove storage failed in ', key, error);
       }

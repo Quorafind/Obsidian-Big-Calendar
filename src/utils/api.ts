@@ -1,6 +1,6 @@
 // import utils from "./utils";
-import {getEvents} from '../obComponents/obGetEvents';
-import {obHideEvent} from '../obComponents/obHideEvent';
+import {getEvents} from '../obComponents/getEvents';
+import {obHideEvent} from '../obComponents/hideEvent';
 
 // type ResponseType<T = unknown> = {
 //   succeed: boolean;
@@ -109,13 +109,13 @@ namespace api {
     // });
   }
 
-//   export function getMyDeletedEvents() {
-//     return getDeletedEvents();
-//     // return request<Model.Event[]>({
-//     //   method: "GET",
-//     //   url: "/api/event/all?deleted=true",
-//     // });
-//   }
+  //   export function getMyDeletedEvents() {
+  //     return getDeletedEvents();
+  //     // return request<Model.Event[]>({
+  //     //   method: "GET",
+  //     //   url: "/api/event/all?deleted=true",
+  //     // });
+  //   }
 
   // export function createEvent(content: string) {
   //   return createEvents(content);
@@ -148,82 +148,82 @@ namespace api {
   }
 
   //eslint-disable-next-line
-//   export function restoreEvent(eventId: string) {
-//     return restoreDeletedEvent(eventId);
-//     // return request({
-//     //   method: "PATCH",
-//     //   url: `/api/event/${eventId}`,
-//     //   data: {
-//     //     deletedAt: "",
-//     //   },
-//     // });
-//   }
+  //   export function restoreEvent(eventId: string) {
+  //     return restoreDeletedEvent(eventId);
+  //     // return request({
+  //     //   method: "PATCH",
+  //     //   url: `/api/event/${eventId}`,
+  //     //   data: {
+  //     //     deletedAt: "",
+  //     //   },
+  //     // });
+  //   }
 
-//   eslint-disable-next-line
-//   export function deleteEvent(eventId: string) {
-//     return deleteForever(eventId);
-//     return request({
-//       method: "DELETE",
-//       url: `/api/event/${eventId}`,
-//     });
-//   }
+  //   eslint-disable-next-line
+  //   export function deleteEvent(eventId: string) {
+  //     return deleteForever(eventId);
+  //     return request({
+  //       method: "DELETE",
+  //       url: `/api/event/${eventId}`,
+  //     });
+  //   }
 
-//   export function getMyQueries() {
-//     return findQuery();
-//     return request<Model.Query[]>({
-//       method: "GET",
-//       url: "/api/query/all",
-//     });
-//   }
-
-  //eslint-disable-next-line
-//   export function createQuery(title: string, querystring: string) {
-//     return createObsidianQuery(title, querystring);
-//     return request<Model.Query>({
-//       method: "PUT",
-//       url: "/api/query/",
-//       data: { title, querystring },
-//     });
-//   }
+  //   export function getMyQueries() {
+  //     return findQuery();
+  //     return request<Model.Query[]>({
+  //       method: "GET",
+  //       url: "/api/query/all",
+  //     });
+  //   }
 
   //eslint-disable-next-line
-//   export function updateQuery(queryId: string, title: string, querystring: string) {
-//     return updateObsidianQuery(queryId, title, querystring);
-//     return request<Model.Query>({
-//       method: "PATCH",
-//       url: `/api/query/${queryId}`,
-//       data: { title, querystring },
-//     });
-//   }
+  //   export function createQuery(title: string, querystring: string) {
+  //     return createObsidianQuery(title, querystring);
+  //     return request<Model.Query>({
+  //       method: "PUT",
+  //       url: "/api/query/",
+  //       data: { title, querystring },
+  //     });
+  //   }
 
   //eslint-disable-next-line
-//   export function deleteQueryById(queryId: string) {
-//     return deleteQueryForever(queryId);
-//     // return request({
-//     //   method: "DELETE",
-//     //   url: `/api/query/${queryId}`,
-//     // });
-//   }
+  //   export function updateQuery(queryId: string, title: string, querystring: string) {
+  //     return updateObsidianQuery(queryId, title, querystring);
+  //     return request<Model.Query>({
+  //       method: "PATCH",
+  //       url: `/api/query/${queryId}`,
+  //       data: { title, querystring },
+  //     });
+  //   }
 
   //eslint-disable-next-line
-//   export function pinQuery(queryId: string) {
-//     return pinQueryInFile(queryId);
-//     // return request({
-//     //   method: "PATCH",
-//     //   url: `/api/query/${queryId}`,
-//     //   data: { pinnedAt: utils.getDateTimeString(Date.now()) },
-//     // });
-//   }
+  //   export function deleteQueryById(queryId: string) {
+  //     return deleteQueryForever(queryId);
+  //     // return request({
+  //     //   method: "DELETE",
+  //     //   url: `/api/query/${queryId}`,
+  //     // });
+  //   }
 
   //eslint-disable-next-line
-//   export function unpinQuery(queryId: string) {
-//     return unpinQueryInFile(queryId);
-//     // return request({
-//     //   method: "PATCH",
-//     //   url: `/api/query/${queryId}`,
-//     //   data: { pinnedAt: "" },
-//     // });
-//   }
+  //   export function pinQuery(queryId: string) {
+  //     return pinQueryInFile(queryId);
+  //     // return request({
+  //     //   method: "PATCH",
+  //     //   url: `/api/query/${queryId}`,
+  //     //   data: { pinnedAt: utils.getDateTimeString(Date.now()) },
+  //     // });
+  //   }
+
+  //eslint-disable-next-line
+  //   export function unpinQuery(queryId: string) {
+  //     return unpinQueryInFile(queryId);
+  //     // return request({
+  //     //   method: "PATCH",
+  //     //   url: `/api/query/${queryId}`,
+  //     //   data: { pinnedAt: "" },
+  //     // });
+  //   }
 
   //eslint-disable-next-line
   // export function uploadFile(formData: FormData) {
