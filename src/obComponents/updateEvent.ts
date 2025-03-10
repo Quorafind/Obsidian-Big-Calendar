@@ -48,11 +48,13 @@ export async function changeEvent(
     const timeIntervalChanged =
       !eventStartMoment.isSame(originalStartDate, 'minute') || !eventEndMoment.isSame(originalEndMoment, 'minute');
 
-    console.log(startDateChanged, endDateChanged, timeIntervalChanged);
+    // 保存原始事件ID，用于后续状态更新
+    const originalEventId = eventid;
+    let result: Model.Event;
 
     // Case 1: Only time interval changed, dates remain the same
     if (timeIntervalChanged && !startDateChanged && !endDateChanged) {
-      return await updateTimeIntervalOnly(
+      result = await updateTimeIntervalOnly(
         eventid,
         originalContent,
         content,
@@ -64,10 +66,9 @@ export async function changeEvent(
         app,
       );
     }
-
     // Case 2: Only end date changed
-    if (!startDateChanged && endDateChanged) {
-      return await updateEndDateOnly(
+    else if (!startDateChanged && endDateChanged) {
+      result = await updateEndDateOnly(
         eventid,
         originalContent,
         content,
@@ -79,10 +80,9 @@ export async function changeEvent(
         app,
       );
     }
-
     // Case 3: Both start and end dates changed
-    if (startDateChanged) {
-      return await moveEventToNewDay(
+    else if (startDateChanged) {
+      result = await moveEventToNewDay(
         eventid,
         originalContent,
         content,
@@ -95,19 +95,26 @@ export async function changeEvent(
         app,
       );
     }
-
     // Fallback - should not normally reach here
-    return await updateTimeIntervalOnly(
-      eventid,
-      originalContent,
-      content,
-      eventType,
-      originalStartDate,
-      eventStartMoment,
-      eventEndMoment,
-      files,
-      app,
-    );
+    else {
+      result = await updateTimeIntervalOnly(
+        eventid,
+        originalContent,
+        content,
+        eventType,
+        originalStartDate,
+        eventStartMoment,
+        eventEndMoment,
+        files,
+        app,
+      );
+    }
+
+    // 添加原始事件ID到结果中，帮助状态管理跟踪
+    return {
+      ...result,
+      originalEventId: originalEventId,
+    };
   }, 'Failed to update event');
 }
 
@@ -332,9 +339,17 @@ async function moveEventToNewDay(
   // Create a new event in the new day's note
   const newEvent = await waitForInsert(cleanContent, eventStartMoment.toDate(), eventEndMoment.toDate());
 
-  // 只从状态中删除旧事件，不再在这里添加新事件
-  // 让eventService.editEvent负责添加新事件到状态
-  eventService.getState().deleteEventById(eventid);
+  // Preserve the original event type instead of using the default
+  if (eventType && eventType !== 'default') {
+    newEvent.eventType = eventType;
+  }
+
+  // Add originalEventId to track the relationship between old and new events
+  (newEvent as Model.Event).originalEventId = eventid;
+
+  // 完全移除在这里的状态管理代码
+  // 这部分工作应该由eventService.editEvent统一处理
+  // eventService.getState().deleteEventById(eventid);
 
   return newEvent;
 }
@@ -406,8 +421,8 @@ function formatEventLine(cleanContent: string, startMoment: moment.Moment, endMo
  * @param eventid The ID of the event
  * @returns The file containing the event
  */
-export function getFile(eventid: string): TFile {
-  return fileService.getFile(eventid);
+export function getFile(event: Model.Event): TFile {
+  return fileService.getFile(event);
 }
 
 /**

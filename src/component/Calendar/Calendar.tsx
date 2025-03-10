@@ -190,24 +190,26 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
   );
 
   // Handle event resize - Memoize the implementation
-  const onEventResize = useCallback<withDragAndDropProps['onEventResize']>(
-    (data) => {
-      const {event, start, end} = data;
-      const eventId = (event as Model.Event).id;
+  const onEventResize = useCallback<withDragAndDropProps['onEventResize']>((data) => {
+    const {event, start, end} = data;
 
-      // Update the event in the store
-      updateEvent(eventId, {
-        start: moment(start).toDate(),
-        end: moment(end).toDate(),
+    // 移除本地更新逻辑，统一由 editEvent 处理
+    // 这样可以确保状态更新和文件更新同步
+
+    // 直接调用 editEvent，移除 setTimeout
+    eventService
+      .editEvent(event as Model.Event, start, end)
+      .then((updatedEvent) => {
+        if (updatedEvent) {
+          console.log('Event resized successfully:', updatedEvent.id);
+        } else {
+          console.error('Failed to resize event');
+        }
+      })
+      .catch((error) => {
+        console.error('Error resizing event:', error);
       });
-
-      // Update the event using the service - use setTimeout to defer
-      setTimeout(() => {
-        eventService.editEvent(event as Model.Event, start, end);
-      }, 0);
-    },
-    [updateEvent],
-  );
+  }, []);
 
   // Handle event drop - Memoize the implementation
   const onEventDrop = useCallback<withDragAndDropProps['onEventDrop']>((data) => {
@@ -230,8 +232,6 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
         console.error('Error updating event:', error);
       });
   }, []);
-
-  console.log('events', events);
 
   // Memoize calendar props to prevent unnecessary re-renders
   const calendarProps = useMemo(() => {

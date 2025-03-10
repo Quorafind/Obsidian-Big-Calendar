@@ -47,9 +47,7 @@ const BigCalendar: React.FC<Props> = () => {
 
   // Handle event double click
   const handleEventDoubleClick = useCallback(async (event: any) => {
-    if (event.path === undefined) {
-      await showEventInDailyNotes(event.id);
-    }
+    await showEventInDailyNotes(event.id);
   }, []);
 
   // Handle event creation

@@ -46,13 +46,12 @@ class FileService {
    * @param eventId ID of the event
    * @returns The TFile object for the event
    */
-  public getFile(eventId: string): TFile | null {
+  public getFile(event: Model.Event): TFile | null {
     const app = this.getState().app;
     if (!app) return null;
 
     // Assuming the event ID represents a path or part of a path to the file
-    const files = app.vault.getFiles();
-    const file = files.find((file) => file.path.includes(eventId));
+    const file = app.vault.getFileByPath(event.path);
     return file || null;
   }
 

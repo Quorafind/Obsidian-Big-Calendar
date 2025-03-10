@@ -45,7 +45,10 @@ export async function getRemainingEvents(note: TFile): Promise<number> {
   }, 'Failed to get remaining events');
 }
 
-export async function getEventsFromDailyNote(dailyNote: TFile | null, dailyEvents: any[]): Promise<any[]> {
+export async function getEventsFromDailyNote(
+  dailyNote: TFile | null,
+  dailyEvents: Model.Event[],
+): Promise<Model.Event[]> {
   return await safeExecute(async () => {
     if (!dailyNote) {
       return [];
@@ -62,7 +65,7 @@ export async function getEventsFromDailyNote(dailyNote: TFile | null, dailyEvent
     const fileContents = await vault.read(dailyNote);
     const fileLines = getAllLinesFromFile(fileContents);
     const startDate = getDateFromFile(dailyNote, 'day');
-    const result: any[] = [];
+    const result: Model.Event[] = [];
 
     // Find the parse below token
     const processHeaderIndex = fileLines.findIndex((line) => lineContainsParseBelowToken(line, settings));
@@ -89,7 +92,7 @@ export async function getEventsFromDailyNote(dailyNote: TFile | null, dailyEvent
       // Skip lines without time information
       if (lineContainsTime(line)) {
         // Convert to event
-        const event = convertToEvent(parsedLine, startDate, currentIndex);
+        const event = convertToEvent(parsedLine, startDate, currentIndex, dailyNote.path);
 
         if (event) {
           result.push(event);

@@ -38,7 +38,7 @@ class EventService {
       // Group events by file
       events.forEach((event) => {
         // Assuming eventId contains file path or can be mapped to a file
-        const file = fileService.getFile(event.id);
+        const file = fileService.getFile(event);
         if (file) {
           const filePath = file.path;
           if (!this.fileEventMap.has(filePath)) {
@@ -125,7 +125,6 @@ class EventService {
   public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate) {
     try {
       if (startDate && endDate && event.id && event.title) {
-        // 检查日期是否发生了变化
         // 记录原始ID以便跟踪
         const originalEventId = event.id;
 
@@ -140,19 +139,91 @@ class EventService {
           new Date(event.end),
         );
 
-        // 如果返回的事件ID与原始ID不同，说明事件被移动并创建了新事件
+        // 检查updatedEvent.id与原始event.id是否相同
         if (updatedEvent.id !== originalEventId) {
+          console.log('Event ID changed from', originalEventId, 'to', updatedEvent.id);
+
+          // 使用原始事件ID删除旧事件 - 可能来自changeEvent返回的originalEventId或原始event.id
+          const idToDelete = (updatedEvent as any).originalEventId || originalEventId;
+          console.log('Deleting event with ID:', idToDelete);
+
           // 先从状态中删除旧事件
-          useEventStore.getState().deleteEventById(originalEventId);
+          useEventStore.getState().deleteEventById(idToDelete);
+
+          // 移除不需要持久化的字段
+          const cleanEvent = {...updatedEvent};
+          delete (cleanEvent as any).originalEventId;
+
           // 再添加新事件到状态
-          useEventStore.getState().insertEvent(updatedEvent);
-          console.log(`Event moved from ID ${originalEventId} to ${updatedEvent.id}`);
+          useEventStore.getState().insertEvent(cleanEvent);
+          console.log('Inserted new event with ID:', cleanEvent.id);
+          console.log('Old event path:', event.path);
+
+          // 获取新事件对应的文件
+          const newEventFile = this.getEventFile(cleanEvent);
+          const newPath = newEventFile ? newEventFile.path : null;
+          console.log('New event path:', newPath);
+
+          // 更新fileEventMap - 处理旧路径
+          if (event.path) {
+            // 从原始文件路径中移除旧事件
+            const oldEvents = this.fileEventMap.get(event.path) || [];
+            console.log('oldEvents in original path:', oldEvents);
+            const updatedEvents = oldEvents.filter((e) => e.id !== idToDelete);
+
+            // 如果更新后事件列表为空，则从map中删除该路径
+            if (updatedEvents.length === 0) {
+              this.fileEventMap.delete(event.path);
+              console.log('Removed empty path:', event.path);
+            } else {
+              // 更新原始文件路径的事件列表
+              this.fileEventMap.set(event.path, updatedEvents);
+              console.log('Updated events in original path:', event.path);
+            }
+          }
+
+          // 处理新路径 - 确保新事件被添加到正确的文件路径下
+          if (newPath) {
+            // 从新文件路径中获取事件列表
+            const newPathEvents = this.fileEventMap.get(newPath) || [];
+
+            // 确保不重复添加事件
+            if (!newPathEvents.some((e) => e.id === cleanEvent.id)) {
+              // 添加新事件到新的文件事件列表
+              newPathEvents.push(cleanEvent);
+
+              // 更新map
+              this.fileEventMap.set(newPath, newPathEvents);
+              console.log('Added event to new path:', newPath);
+            }
+
+            // 更新事件对象的path属性
+            cleanEvent.path = newPath;
+          }
         } else {
           // 如果ID没变，正常更新事件状态
+          console.log('event path', event.path);
           useEventStore.getState().editEvent(updatedEvent);
+          console.log('Updated existing event with same ID:', updatedEvent.id);
+
+          // 更新fileEventMap中的事件 - 使用event的path属性
+          if (event.path) {
+            const events = this.fileEventMap.get(event.path) || [];
+            const eventIndex = events.findIndex((e) => e.id === updatedEvent.originalEventId);
+
+            if (eventIndex !== -1) {
+              const updatedEvents = [...events];
+              updatedEvents[eventIndex] = updatedEvent;
+              this.fileEventMap.set(event.path, updatedEvents);
+            }
+          }
         }
 
-        return updatedEvent;
+        // 移除不需要持久化的字段
+        const returnEvent = {...updatedEvent};
+        delete (returnEvent as any).originalEventId;
+
+        return returnEvent;
       }
       return event;
     } catch (err) {
@@ -204,25 +275,46 @@ class EventService {
   public async fetchEventsFromFile(app: App, file: TFile): Promise<Model.Event[]> {
     try {
       // Get events specific to this file
-      const events: Model.Event[] = [];
-      await getEventsFromDailyNote(file, events);
+      const newEvents: Model.Event[] = [];
+      await getEventsFromDailyNote(file, newEvents);
 
-      if (!Array.isArray(events)) {
+      if (!Array.isArray(newEvents)) {
         return [];
       }
 
-      // Store these events in our file-event map
-      this.fileEventMap.set(file.path, [...events]);
+      // Get existing events for this file
+      const existingEvents = this.fileEventMap.get(file.path) || [];
 
-      // Get current events (excluding ones from this file if any)
-      const currentEvents = this.getState().events.filter((event) => {
-        // Check if this event is from our file
-        const fileEvents = this.fileEventMap.get(file.path) || [];
-        return !fileEvents.some((e) => e.id === event.id);
-      });
+      // Compare and update events
+      const updatedFileEvents: Model.Event[] = [];
 
-      // Combine with new events from this file
-      const updatedEvents = [...currentEvents, ...events];
+      // Process new events
+      for (const newEvent of newEvents) {
+        // Try to find matching event in existing events
+        const existingEvent = existingEvents.find((e) => e.id === newEvent.id || e.title === newEvent.title);
+
+        // If no match or if event has changed, use the new event
+        if (
+          !existingEvent ||
+          existingEvent.id !== newEvent.id ||
+          existingEvent.title !== newEvent.title ||
+          new Date(existingEvent.end).getTime() !== new Date(newEvent.end).getTime()
+        ) {
+          updatedFileEvents.push(newEvent);
+        } else {
+          // If no changes, keep the existing event
+          updatedFileEvents.push(existingEvent);
+        }
+      }
+
+      // Update the file-event map
+      this.fileEventMap.set(file.path, updatedFileEvents);
+
+      // Get all current events that are NOT from this file path
+      const currentEvents = this.getState().events.filter((event) => event.path !== file.path);
+
+      // Combine with updated events from this file
+      const updatedEvents = [...currentEvents, ...updatedFileEvents];
 
       // Update the store
       useEventStore.getState().setEvents(updatedEvents);
@@ -231,7 +323,7 @@ class EventService {
         this.initialized = true;
       }
 
-      return events;
+      return updatedFileEvents;
     } catch (error) {
       console.error(`Failed to fetch events from file ${file.path}:`, error);
       return [];
@@ -387,8 +479,8 @@ class EventService {
    * @param eventId Event ID
    * @returns File object or null
    */
-  public getEventFile(eventId: string): TFile | null {
-    return fileService.getFile(eventId);
+  public getEventFile(event: Model.Event): TFile | null {
+    return fileService.getFile(event);
   }
 }
 

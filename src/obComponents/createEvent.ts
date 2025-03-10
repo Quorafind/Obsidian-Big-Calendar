@@ -95,6 +95,7 @@ export async function waitForInsert(
             ),
         allDay: false,
         eventType: 'default',
+        path: file.path,
       };
     } else {
       // Use existing daily note
@@ -142,6 +143,7 @@ export async function waitForInsert(
             ),
         allDay: false,
         eventType: 'default',
+        path: existingFile.path,
       };
     }
   }, 'Failed to create event');

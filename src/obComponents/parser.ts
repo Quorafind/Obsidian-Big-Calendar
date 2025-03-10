@@ -443,7 +443,12 @@ export function lineContainsTime(line: string): boolean {
  * @param lineIndex The index of the line in the file (for ID generation)
  * @returns An event object compatible with full calendar
  */
-export function convertToEvent(parsedLine: ParsedLine, defaultDate: moment.Moment, lineIndex: number): any | null {
+export function convertToEvent(
+  parsedLine: ParsedLine,
+  defaultDate: moment.Moment,
+  lineIndex: number,
+  path: string,
+): Model.Event | null {
   // Skip lines without time information
   if (!parsedLine.startTime) {
     return null;
@@ -561,13 +566,14 @@ export function convertToEvent(parsedLine: ParsedLine, defaultDate: moment.Momen
   }
 
   // Create event object
-  const event: any = {
+  const event: Model.Event = {
     id,
     title: parsedLine.content,
     start: startDate.toDate(),
     end: endDate.toDate(),
     allDay: false,
     eventType,
+    path,
   };
 
   // Add optional fields if available
