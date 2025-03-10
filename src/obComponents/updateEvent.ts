@@ -248,7 +248,21 @@ async function updateEndDateOnly(
 
   // Clean content and format with new end date
   const cleanContent = cleanEventContent(originalContent, content);
-  const newLine = formatEventLine(cleanContent, eventStartMoment, eventEndMoment);
+
+  // Force same-day event formatting if start and end dates are on the same day
+  // This will ensure it uses the "HH:MM-HH:MM" format instead of adding date emojis
+  const sameDay = eventStartMoment.isSame(eventEndMoment, 'day');
+  let newLine;
+
+  if (sameDay) {
+    // For same-day events, manually format with time range
+    const startTime = eventStartMoment.format('HH:mm');
+    const endTime = eventEndMoment.format('HH:mm');
+    newLine = `- ${startTime}-${endTime} ${cleanContent}`;
+  } else {
+    // Otherwise use the standard formatting function
+    newLine = formatEventLine(cleanContent, eventStartMoment, eventEndMoment);
+  }
 
   // Update the file
   fileLines[lineIndex] = newLine;
@@ -390,7 +404,14 @@ function formatEventLine(cleanContent: string, startMoment: moment.Moment, endMo
   const timeHour = startMoment.format('HH');
   const timeMinute = startMoment.format('mm');
 
-  let newLine = `- ${timeHour}:${timeMinute}`;
+  // Extract block ID if present
+  const blockIdMatch = cleanContent.match(/\s(\^[a-zA-Z0-9]{2,})$/);
+  const blockId = blockIdMatch ? blockIdMatch[1] : '';
+
+  // Remove block ID from content for processing
+  let processedContent = blockId ? cleanContent.replace(blockIdMatch[0], '') : cleanContent;
+
+  let newLine = `- ${timeHour}:${timeMinute} ${processedContent}`;
 
   // Add end time if needed
   if (endMoment.isAfter(startMoment)) {
@@ -399,18 +420,20 @@ function formatEventLine(cleanContent: string, startMoment: moment.Moment, endMo
 
     if (sameDay) {
       // For same-day events, use a time range format (HH:MM-HH:MM)
-      newLine = `- ${timeHour}:${timeMinute}-${endMoment.format('HH:mm')}`;
+      newLine = `- ${timeHour}:${timeMinute}-${endMoment.format('HH:mm')} ${processedContent}`;
     } else {
       // For multi-day events, add the end date with calendar emoji
-      newLine = `- ${timeHour}:${timeMinute}`;
+      newLine = `- ${timeHour}:${timeMinute} ${processedContent}`;
       newLine += ` 📅 ${endMoment.format('YYYY-MM-DD')}`;
       // Add end time
       newLine += ` ⏲ ${endMoment.format('HH:mm')}`;
     }
   }
 
-  // Add the clean content
-  newLine += ` ${cleanContent}`;
+  // Add block ID back at the end if it exists
+  if (blockId) {
+    newLine += ` ${blockId}`;
+  }
 
   return newLine;
 }
