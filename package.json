@@ -1,6 +1,6 @@
 {
   "name": "obsidian-big-calendar",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Supports drag and drop, resizing, and more for events in Obsidian",
   "author": "boninall",
   "main": "main.js",
@@ -11,7 +11,8 @@
     "build:nolint": "NODE_ENV=production vite build",
     "build": "cross-env NODE_ENV=production vite build --mode production",
     "test": "jest",
-    "test:watch": "npm test -- --watch"
+    "test:watch": "npm test -- --watch",
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "dependencies": {
     "@types/react": "^19.0.10",
