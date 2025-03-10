@@ -1,107 +1,128 @@
-import utils from '../helpers/utils';
+import utils from '@/utils/utils';
+import {create} from 'zustand';
 
-export interface State {
+// Define the state interface
+export interface EventState {
   events: Model.Event[];
   tags: string[];
+
+  // Actions
+  setEvents: (events: Model.Event[]) => void;
+  setTags: (tags: string[]) => void;
+  insertEvent: (event: Model.Event) => void;
+  deleteEventById: (id: string) => void;
+  editEvent: (event: Model.Event) => void;
+  updateEvent: (eventId: string, updates: Partial<Model.Event>) => void;
 }
 
-interface SetEventsAction {
-  type: 'SET_EVENTS';
-  payload: {
-    events: Model.Event[];
-  };
-}
-
-interface SetTagsAction {
-  type: 'SET_TAGS';
-  payload: {
-    tags: string[];
-  };
-}
-
-interface InsertEventAction {
-  type: 'INSERT_EVENT';
-  payload: {
-    event: Model.Event;
-  };
-}
-
-interface DeleteEventByIdAction {
-  type: 'DELETE_EVENT_BY_ID';
-  payload: {
-    id: string;
-  };
-}
-
-interface EditEventByIdAction {
-  type: 'EDIT_EVENT';
-  payload: Model.Event;
-}
-
-export type Actions = SetEventsAction | SetTagsAction | InsertEventAction | DeleteEventByIdAction | EditEventByIdAction;
-
-export function reducer(state: State, action: Actions): State {
-  switch (action.type) {
-    case 'SET_EVENTS': {
-      const events = utils.dedupeObjectWithId(
-        action.payload.events.sort(
-          (a, b) => utils.getTimeStampByDate(b.start) - utils.getTimeStampByDate(a.start),
-        ),
-      );
-
-      // const events = action.payload.events.sort((a, b) => utils.getTimeStampByDate(b.createdAt) - utils.getTimeStampByDate(a.createdAt));
-
-      return {
-        ...state,
-        events: [...events],
-      };
-    }
-    case 'SET_TAGS': {
-      return {
-        ...state,
-        tags: action.payload.tags,
-      };
-    }
-    case 'INSERT_EVENT': {
-      const events = utils.dedupeObjectWithId(
-        [action.payload.event, ...state.events]
-      );
-
-      return {
-        ...state,
-        events,
-      };
-    }
-    case 'DELETE_EVENT_BY_ID': {
-      return {
-        ...state,
-        events: [...state.events].filter((event) => event.id !== action.payload.id),
-      };
-    }
-    case 'EDIT_EVENT': {
-      const events = state.events.map((m) => {
-        if (m.id === action.payload.id) {
-          return {
-            ...m,
-            ...action.payload,
-          };
-        } else {
-          return m;
-        }
-      });
-
-      return {
-        ...state,
-        events,
-      };
-    }
-    default: {
-      return state;
-    }
-  }
-}
-
-export const defaultState: State = {
+// Create the store using Zustand
+const useEventStore = create<EventState>((set, get) => ({
   events: [],
   tags: [],
-};
+
+  // Actions
+  setEvents: (events) => {
+    // First check if the events array actually changed
+    const currentEvents = get().events;
+
+    // If the arrays are the same reference, do nothing
+    if (events === currentEvents) {
+      return;
+    }
+
+    // If lengths are different, definitely set new events
+    if (events.length !== currentEvents.length) {
+      set({
+        events: utils.dedupeObjectWithId(
+          events.sort((a, b) => utils.getTimeStampByDate(b.start) - utils.getTimeStampByDate(a.start)),
+        ),
+      });
+      return;
+    }
+
+    // Check if any events have changed
+    const hasChanged = events.some((event, index) => {
+      const currentEvent = currentEvents[index];
+      return (
+        event.id !== currentEvent.id ||
+        event.start !== currentEvent.start ||
+        event.end !== currentEvent.end ||
+        event.title !== currentEvent.title
+      );
+    });
+
+    // Only update if something changed
+    if (hasChanged) {
+      set({
+        events: utils.dedupeObjectWithId(
+          events.sort((a, b) => utils.getTimeStampByDate(b.start) - utils.getTimeStampByDate(a.start)),
+        ),
+      });
+    }
+  },
+
+  setTags: (tags) => set({tags}),
+
+  insertEvent: (event) => {
+    // Get current events
+    const currentEvents = get().events;
+
+    // Check if event already exists
+    const eventExists = currentEvents.some((e) => e.id === event.id);
+
+    // Only insert if event doesn't exist
+    if (!eventExists) {
+      set((state) => ({
+        events: utils.dedupeObjectWithId([event, ...state.events]),
+      }));
+    }
+  },
+
+  deleteEventById: (id) =>
+    set((state) => ({
+      events: state.events.filter((event) => event.id !== id),
+    })),
+
+  editEvent: (updatedEvent) =>
+    set((state) => {
+      // Find the event to update
+      const eventIndex = state.events.findIndex((event) => event.id === updatedEvent.id);
+
+      // If event not found, return state unchanged
+      if (eventIndex === -1) {
+        return state;
+      }
+
+      // Create a new events array with the updated event
+      const newEvents = [...state.events];
+      newEvents[eventIndex] = {...newEvents[eventIndex], ...updatedEvent};
+
+      return {
+        events: newEvents,
+      };
+    }),
+
+  updateEvent: (eventId, updates) => {
+    // Get current events
+    const events = get().events;
+
+    // Find the event to update
+    const eventIndex = events.findIndex((event) => event.id === eventId);
+
+    // If event not found, do nothing
+    if (eventIndex === -1) {
+      return;
+    }
+
+    // Create new array with updated event
+    const updatedEvents = [...events];
+    updatedEvents[eventIndex] = {
+      ...updatedEvents[eventIndex],
+      ...updates,
+    };
+
+    set({events: updatedEvents});
+  },
+}));
+
+export default useEventStore;

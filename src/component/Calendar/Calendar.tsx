@@ -1,329 +1,287 @@
-import {forwardRef, ReactNode, useCallback, useContext, useEffect, useImperativeHandle, useMemo, useRef} from 'react';
-import {storage, remove} from '../../helpers/storage';
-// import useRefresh from '../../hooks/useRefresh';
-import '../../less/Calendar.less';
-import React from 'react';
-// import {Notice, TFile} from 'obsidian';
-// import appStore from '../../stores/appStore';
-// import {t} from '../../translations/helper';
+import React, {forwardRef, useCallback, useEffect, useMemo, memo} from 'react';
+import '@/less/Calendar.less';
 import {Calendar, Event, momentLocalizer, SlotInfo, View} from 'react-big-calendar';
 import {moment} from 'obsidian';
 import withDragAndDrop, {withDragAndDropProps} from 'react-big-calendar/lib/addons/dragAndDrop';
-import dailyNotesService from '../../services/dailyNotesService';
-import GenericInputPrompt from '../../obComponents/GenericInputPrompt';
-import Only from '../common/OnlyWhen';
-import useState from 'react-usestateref';
-// import appContext from '../../stores/appContext';
-// import useToggle from '../../hooks/useToggle';
-import eventService from '../../services/eventService';
-import useLoading from '../../hooks/useLoading';
-// import {CALENDAR_VIEW_TYPE} from '../../constants';
-// import useMemo from 'react';
+import dailyNotesService from '@/services/fileService';
+import eventService from '@/services/eventService';
+import useFileStore from '@/stores/fileStore';
+import useCalendarStore from '@/stores/calendarStore';
+import EventCreatePrompt, {EventCreateResult} from '@/obComponents/EventCreatePrompt';
+import {useEvents} from '@/hooks/useStore';
+import useEventStore from '@/stores/eventStore';
+import {updateEvent} from '@/api';
 
 export interface EventRefActions {
-  setEvents: (events: Model.Event[]) => void;
+  updateEvents: (events: Model.Event[]) => void;
 }
 
 interface CalendarProps {
   selectable: boolean;
-  // events: Model.Event[];
   resizeable: boolean;
   defaultView: View;
   StartDate: string;
   popup: boolean;
   onEventDoubleClick: (event: Event) => void;
-  onEventSelect: (content: string, slotInfo: SlotInfo) => void;
+  onEventSelect: (event: EventCreateResult, slotInfo: SlotInfo) => void;
 }
 
-// let prevEvents: Model.Event[];
-// let leafView;
+// Create a memoized DragAndDropCalendar component
+const DragAndDropCalendar = memo(withDragAndDrop(Calendar as any));
 
 // eslint-disable-next-line react/display-name
 const CalendarComponent = forwardRef((props: CalendarProps, ref: React.ForwardedRef<EventRefActions>) => {
   const {
     selectable,
-    // events,
     resizeable,
     defaultView,
     StartDate,
     popup,
     onEventDoubleClick: handleDoubleClickEventCallback,
     onEventSelect: handleEventSelectCallback,
-    // onContentChange: handleContentChangeCallback,
   } = props;
-  // const {
-  //   eventState: {events},
-  // } = useContext(appContext);
-  // const refresh = useRefresh();
-  const [allEvents, setNewEvents, eventRef] = useState<Event[]>([]);
-  const [select, setSelect] = useState(true);
-  const [resize, setResize] = useState(true);
-  const [calendarPopup, setCalendarPopup] = useState(true);
-  const [localizer, setLocalizer] = useState(null);
-  const [calendarView, setCalendarView] = useState(null);
-  const [calendarDate, setCalendarDate] = useState(null);
-  const loadingState = useLoading();
-  // const {app} = dailyNotesService.getState();
 
-  const DragAndDropCalendar = withDragAndDrop(Calendar as any);
-  // const {app} = dailyNotesService.getState();
-  // const leaves = app.workspace.getLeavesOfType(CALENDAR_VIEW_TYPE);
-  // const [value, setValue] = useState("")
+  // Get app from fileStore
+  const app = useFileStore((state) => state.app);
 
-  // if (leaves.length > 0) {
-  //   const leaf = leaves[0];
-  //   const leafView = leaf.view.containerEl?.querySelector('.rbc-time-content') as HTMLElement;
-  //   if (leafView) {
-  //     console.log(getViewScrollTop());
-  //     leafView.scrollTo({top: getViewScrollTop()});
-  //   }
-  // }
+  const events = useEvents();
+  const updateEvent = useEventStore((state) => state.updateEvent);
+  // Get state and actions from the calendar store
+  const {
+    calendarView,
+    calendarDate,
+    selectable: select,
+    resizable: resize,
+    calendarPopup,
+    setCalendarView,
+    setCalendarDate,
+    setSelectable,
+    setResizable,
+    setCalendarPopup,
+    setStartDay,
+    setLoading,
+    loadStoredPreferences,
+    saveCalendarView,
+    saveCalendarDate,
+  } = useCalendarStore();
 
-  // useMemo(() => {
-  //   // prevEvents = allEvents;
-  //   if (events !== eventRef.current) {
-  //     setNewEvents(events);
-  //     // refresh();
-  //   }
-  // }, [events]);
+  // Create a memoized localizer
+  const localizer = useMemo(() => momentLocalizer(moment), []);
 
-  useMemo(() => {
-    loadingState.setFinish();
-  }, [defaultView]);
+  // Initialize the component - Only run once when app is available
+  useEffect(() => {
+    if (!app) return;
 
-  useMemo(() => {
-    console.log('render third');
-    if (calendarView === null) {
-      const getView = getEditorContentCache();
-      if (getView !== null && getView !== 'month') {
-        setCalendarView(getView);
-      } else {
+    // Use a timeout to defer these operations, breaking potential circular dependencies
+    const timeoutId = setTimeout(() => {
+      // Load stored preferences
+      loadStoredPreferences(app);
+
+      // Set initial values from props if they don't match stored values
+      if (defaultView && defaultView !== calendarView) {
         setCalendarView(defaultView);
       }
-    }
-  }, [defaultView]);
 
-  useMemo(() => {
-    if (calendarDate === null) {
-      const currentDate = getCurrentDate();
-      if (currentDate !== null) {
-        setCalendarDate(currentDate);
-      } else {
-        setCalendarDate(new Date());
+      if (selectable !== select) {
+        setSelectable(selectable);
       }
-    }
-  }, [calendarView]);
 
-  // useMemo(() => {
-  //   if (select !== selectable) {
-  //     setSelect(selectable);
-  //   }
-  // }, [selectable]);
+      if (resizeable !== resize) {
+        setResizable(resizeable);
+      }
 
-  // useMemo(() => {
-  //   if (resize !== resizeable) {
-  //     setResize(resizeable);
-  //   }
-  // }, [resizeable]);
+      if (popup !== calendarPopup) {
+        setCalendarPopup(popup);
+      }
 
-  // useMemo(() => {
-  //   if (calendarPopup !== popup) {
-  //     setCalendarPopup(popup);
-  //   }
-  // }, [popup]);
+      // Set start day and update moment locale
+      setStartDay(StartDate === 'sunday' ? 'sunday' : 'monday');
 
-  useMemo(() => {
-    if (calendarPopup !== popup) {
-      setCalendarPopup(popup);
-    }
+      // Mark loading as complete
+      setLoading(false);
+    }, 0);
 
-    if (resize !== resizeable) {
-      setResize(resizeable);
-    }
+    return () => clearTimeout(timeoutId);
+  }, [
+    app,
+    defaultView,
+    calendarView,
+    selectable,
+    select,
+    resizeable,
+    resize,
+    popup,
+    calendarPopup,
+    StartDate,
+    loadStoredPreferences,
+    setCalendarView,
+    setSelectable,
+    setResizable,
+    setCalendarPopup,
+    setStartDay,
+    setLoading,
+  ]);
 
-    if (select !== selectable) {
-      setSelect(selectable);
-    }
-
-    if (localizer === null) {
-      setLocalizer(momentLocalizer(moment));
-    }
-    // const momentChange = () => {
-    //   moment.locale('en');
-    if (StartDate == 'sunday') {
-      moment.updateLocale('en', {
-        week: {
-          dow: 0,
-        },
-      });
-      // return moment;
-    }
-    if (StartDate == 'monday') {
-      moment.updateLocale('en', {
-        week: {
-          dow: 1,
-        },
-      });
-    }
-    //   return moment;
-    // };
-  }, [StartDate, popup, resizeable, selectable]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      setEvents: (events: Model.Event[]) => {
-        if (eventRef.current !== events) {
-          setNewEvents(events);
-          // refresh();
-        }
-      },
-    }),
-    [],
-  );
-
-  const styleEvents = (event: any) => {
+  // Style events based on their type
+  const styleEvents = useCallback((event: any) => {
     const className = event.eventType;
     return {className: className};
-  };
+  }, []);
 
+  // Handle double click on events
   const handleDoubleClickEvent = useCallback(
     (event: Event) => {
       handleDoubleClickEventCallback(event);
     },
-    [StartDate],
+    [handleDoubleClickEventCallback],
   );
 
+  // Handle event selection
   const handleEventSelect = useCallback(
     async (slotInfo: SlotInfo) => {
       const {app} = dailyNotesService.getState();
-      const addEvent = await GenericInputPrompt.Prompt(app, 'Input Event', '', '');
+
+      // Pass the start and end times from slotInfo to EventCreatePrompt
+      const addEvent = await EventCreatePrompt.Prompt(
+        app,
+        'Input Event',
+        '',
+        '',
+        slotInfo.start as Date,
+        slotInfo.end as Date,
+      );
 
       handleEventSelectCallback(addEvent, slotInfo);
     },
-    [eventRef],
+    [handleEventSelectCallback],
   );
 
-  const handleViewChange = (view: View) => {
-    if (calendarView !== view) {
-      setCalendarView(view);
-      setEditorContentCache(view);
-    }
-  };
-
-  const handleNavigate = (date: Date) => {
-    if (calendarDate !== date) {
-      setCalendarDate(date);
-      setCurrentDate(date);
-    }
-  };
-
-  const onEventResize: withDragAndDropProps['onEventResize'] = (data) => {
-    console.log(data);
-    // const {start, end} = data;
-    // const leaves = app.workspace.getLeavesOfType(CALENDAR_VIEW_TYPE);
-    // let leafView;
-    // if (leaves.length > 0) {
-    //   const leaf = leaves[0];
-    //   leafView = leaf.view.containerEl.querySelector('.rbc-time-content') as HTMLElement;
-    //   // if (leafView) {
-    //   //   leafView.scrollTo({top: getViewScrollTop()});
-    //   // }
-    // }
-    // const viewHeight = leafView.scrollTop;
-    // setViewScrollTop(viewHeight);
-    const nextEvents = allEvents.map((existingEvent) => {
-      if ((existingEvent as Model.Event).id == (data.event as Model.Event).id) {
-        existingEvent.start = moment(data.start).toDate();
-        existingEvent.end = moment(data.end).toDate();
-        console.log(existingEvent);
+  // Handle view changes
+  const handleViewChange = useCallback(
+    (view: View) => {
+      if (calendarView !== view) {
+        setCalendarView(view);
+        // Save the view change to storage
+        if (app) {
+          setTimeout(() => {
+            saveCalendarView(app);
+          }, 0);
+        }
       }
-      return existingEvent;
-    });
-    setNewEvents(nextEvents);
-    eventService.editEvent(data.event as Model.Event, data.start, data.end);
-    // setEvents(currentEvents => {
-    //   const firstEvent = {
-    //     start: new Date(start),
-    //     end: new Date(end),
-    //   }
-    //   return [...currentEvents, firstEvent]
-    // })
-  };
-
-  const onEventDrop: withDragAndDropProps['onEventDrop'] = (data) => {
-    // if (!data.event.allDay && droppedOnAllDaySlot) {
-    //   allDay = true
-    // } else if (event.allDay && !droppedOnAllDaySlot) {
-    //   allDay = false
-    // }
-    const nextEvents = allEvents.map((existingEvent) => {
-      if ((existingEvent as Model.Event).id == (data.event as Model.Event).id) {
-        existingEvent.start = moment(data.start).toDate();
-        existingEvent.end = moment(data.end).toDate();
-        // existingEvent = await changeEvent((existingEvent as Model.Event).id,(existingEvent as Model.Event).originalContent, (existingEvent as Model.Event).title, (existingEvent as Model.Event).eventType, data.start, data.end, (existingEvent as Model.Event).end);
-        console.log(existingEvent);
-      }
-      
-      return existingEvent;
-    });
-    setNewEvents(nextEvents);
-    eventService.editEvent(data.event as Model.Event, data.start, data.end);
-  };
-
-  return (
-    <Only when={calendarView !== null && eventRef.current.length > 0}>
-      {console.log('render')}
-      <DragAndDropCalendar
-        selectable={select}
-        localizer={localizer}
-        events={eventRef.current}
-        resizable={resize}
-        defaultView={calendarView}
-        defaultDate={calendarDate}
-        style={{height: '90vh'}}
-        eventPropGetter={styleEvents}
-        popup={calendarPopup}
-        onEventDrop={onEventDrop}
-        onEventResize={onEventResize}
-        // slotPropGetter={customSlotPropGetter}
-        // onDragStart={console.log}
-        // dragFromOutsideItem={
-        //   this.state.displayDragItemInCell ? this.dragFromOutsideItem : null
-        // }
-        titleAccessor={(event) => event.title}
-        tooltipAccessor={(event) => event.title}
-        // onRangeChange={onRangeChange}
-        // onDropFromOutside={this.onDropFromOutside}
-        // handleDragStart={this.handleDragStart}
-        // onSelectEvent={event => alert(event.title)}
-        onView={handleViewChange}
-        onNavigate={handleNavigate}
-        onDoubleClickEvent={handleDoubleClickEvent}
-        onSelectSlot={handleEventSelect}
-      />
-    </Only>
+    },
+    [calendarView, setCalendarView, app, saveCalendarView],
   );
+
+  // Handle navigation (date changes)
+  const handleNavigate = useCallback(
+    (date: Date) => {
+      if (calendarDate !== date) {
+        setCalendarDate(date);
+
+        // Save the date change to storage
+        if (app) {
+          setTimeout(() => {
+            saveCalendarDate(app);
+          }, 0);
+        }
+      }
+    },
+    [calendarDate, setCalendarDate, app, saveCalendarDate],
+  );
+
+  // Handle event resize - Memoize the implementation
+  const onEventResize = useCallback<withDragAndDropProps['onEventResize']>((data) => {
+    const {event, start, end} = data;
+
+    // 移除本地更新逻辑，统一由 editEvent 处理
+    // 这样可以确保状态更新和文件更新同步
+
+    // 直接调用 editEvent，移除 setTimeout
+    eventService
+      .editEvent(event as Model.Event, start, end)
+      .then((updatedEvent) => {
+        if (updatedEvent) {
+          console.log('Event resized successfully:', updatedEvent.id);
+        } else {
+          console.error('Failed to resize event');
+        }
+      })
+      .catch((error) => {
+        console.error('Error resizing event:', error);
+      });
+  }, []);
+
+  // Handle event drop - Memoize the implementation
+  const onEventDrop = useCallback<withDragAndDropProps['onEventDrop']>((data) => {
+    const {event, start, end} = data;
+
+    // 移除本地更新，让状态更新统一由 editEvent 处理
+    // 这样可以避免状态更新和文件更新不同步
+
+    // 直接调用 editEvent，移除 setTimeout
+    eventService
+      .editEvent(event as Model.Event, start, end)
+      .then((updatedEvent) => {
+        if (updatedEvent) {
+          console.log('Event updated successfully:', updatedEvent.id);
+        } else {
+          console.error('Failed to update event');
+        }
+      })
+      .catch((error) => {
+        console.error('Error updating event:', error);
+      });
+  }, []);
+
+  // Memoize calendar props to prevent unnecessary re-renders
+  const calendarProps = useMemo(() => {
+    return {
+      selectable: select,
+      localizer: localizer,
+      events: events,
+      resizable: resize,
+      defaultView: calendarView,
+      defaultDate: calendarDate,
+      date: calendarDate,
+      view: calendarView,
+      style: {height: '90vh'},
+      eventPropGetter: styleEvents,
+      popup: calendarPopup,
+      onEventDrop: onEventDrop,
+      onEventResize: onEventResize,
+      titleAccessor: (event: any) => {
+        // Remove time patterns from the title for display
+        const title = event.title as string;
+        return title
+          .replace(/\d{1,2}:\d{2}(-\d{1,2}:\d{2})?/g, '') // Remove time ranges like 10:00-11:00
+          .replace(/⏲\s?\d{1,2}:\d{2}/g, '') // Remove end time emoji patterns
+          .replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '') // Remove date patterns
+          .trim();
+      },
+      tooltipAccessor: (event: any) => event.title as string,
+      onView: handleViewChange,
+      onNavigate: handleNavigate,
+      onDoubleClickEvent: handleDoubleClickEvent,
+      onSelectSlot: handleEventSelect,
+    };
+  }, [
+    select,
+    localizer,
+    events,
+    calendarDate,
+    resize,
+    calendarView,
+    styleEvents,
+    calendarPopup,
+    onEventDrop,
+    onEventResize,
+    handleViewChange,
+    handleNavigate,
+    handleDoubleClickEvent,
+    handleEventSelect,
+  ]);
+
+  return <DragAndDropCalendar {...calendarProps} />;
 });
 
-function getEditorContentCache(): View {
-  return storage.get(['viewCache']).viewCache ?? 'month';
-}
-
-function getCurrentDate(): Date {
-  return storage.get(['currentDate']).currentDate ?? null;
-}
-
-function setEditorContentCache(view: View) {
-  storage.set({
-    viewCache: view,
-  });
-}
-
-function setCurrentDate(currentDate: Date) {
-  storage.set({
-    currentDate: currentDate,
-  });
-}
-
-export default CalendarComponent;
+export default memo(CalendarComponent);

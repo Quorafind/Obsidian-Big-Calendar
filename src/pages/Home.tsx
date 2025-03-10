@@ -1,31 +1,26 @@
-import {useCallback, useContext, useEffect} from 'react';
-// import { locationService, userService } from "../services";
 import {homeRouterSwitch} from '../routers';
-import appContext from '../stores/appContext';
-import useLoading from '../hooks/useLoading';
-import React from 'react';
+import React, {useMemo} from 'react';
+import {useLocation} from '../hooks/useStore';
 
 function Home() {
-  const {
-    locationState: {pathname},
-  } = useContext(appContext);
-  // const { app } = dailyNotesService.getState();
-  const loadingState = useLoading();
-  //   // const refresh = useRefresh();
+  // Get location with our optimized hook
+  const location = useLocation();
 
-  useEffect(() => {
-    loadingState.setFinish();
-  }, []);
+  // Memoize the content based only on pathname changes
+  const content = useMemo(() => {
+    return homeRouterSwitch(location.pathname);
+  }, [location.pathname]);
 
   return (
     <>
       {/* {loadingState.isLoading ? null : ( */}
-        <section id="page-wrapper">
-          <main className="content-wrapper">{homeRouterSwitch(pathname)}</main>
-        </section>
+      <section id="page-wrapper">
+        <main className="content-wrapper">{content}</main>
+      </section>
       {/* )} */}
     </>
   );
 }
 
-export default Home;
+// Export as memoized component to prevent unnecessary renders
+export default React.memo(Home);

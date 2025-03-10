@@ -1,17 +1,6 @@
-import dailyNotesService from './dailyNotesService';
-import globalStateService from './globalStateService';
-import locationService from './locationService';
-import eventService from './eventService';
-// import queryService from './queryService';
-// import userService from "./userService";
-import resourceService from './resourceService';
+import fileService from '@/services/fileService';
+import globalService from '@/services/globalService';
+import locationService from '@/services/locationService';
+import eventService from '@/services/eventService';
 
-export {
-  globalStateService,
-  locationService,
-  eventService,
-  // queryService,
-  dailyNotesService,
-  // userService,
-  resourceService,
-};
+export {globalService, locationService, eventService, fileService};

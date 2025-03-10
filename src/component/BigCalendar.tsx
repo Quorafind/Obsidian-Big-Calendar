@@ -1,103 +1,82 @@
-import React, {useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
-import appContext from '../stores/appContext';
-import {dailyNotesService, eventService} from '../services';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {fileService, eventService} from '@/services';
 import {Notice} from 'obsidian';
-import CalendarComponent, {EventRefActions} from './Calendar/Calendar';
+import CalendarComponent, {EventRefActions} from '@/component/Calendar/Calendar';
 import {View, SlotInfo} from 'react-big-calendar';
-import Only from './common/OnlyWhen';
-import {showEventInDailyNotes} from '../obComponents/obShowEvent';
-import {StartDate} from '../bigCalendar';
+import {showEventInDailyNotes} from '@/obComponents/showEvent';
+import {useApp, useEvents} from '@/hooks/useStore';
+import useCalendarStore from '@/stores/calendarStore';
+import {EventCreateResult} from '@/obComponents/EventCreatePrompt';
 
 interface Props {}
 
-// let allEvents;
-
 const BigCalendar: React.FC<Props> = () => {
-  const {
-    eventState: {events},
-  } = useContext(appContext);
-  //   const prevGlobalStateRef = useRef(globalState);
-  const [isFetching, setFetchStatus] = useState(false);
+  const app = useApp();
+  const [isLoading, setIsLoading] = useState(true);
   const eventRef = useRef<EventRefActions>(null);
-  //   const [change, setChange] = useState(true);
 
-  //   allEvents = events;
+  // Get calendar state once and prevent re-renders
+  const {calendarView, startDay} = useCalendarStore();
 
+  // Fetch data only once when component mounts
   useEffect(() => {
-    // eventService
-    //   .fetchAllEvents()
-    //   .then(() => {
-    //     setFetchStatus(true);
-    //   })
-    //   .catch(() => {
-    //     new Notice('😭 Fetch Error');
-    //   });
-    dailyNotesService
-      .getMyAllDailyNotes()
-      .then(() => {
-        setFetchStatus(true);
-      })
-      .catch(() => {
-        new Notice('😭 Fetch DailyNotes Error');
-      });
-    dailyNotesService.getState();
-  }, [StartDate]);
+    let isMounted = true;
+    const fetchData = async () => {
+      try {
+        await Promise.all([eventService.fetchAllEvents(app), fileService.getMyAllDailyNotes()]);
 
-  useMemo(() => {
-    if (!eventRef.current) {
-      return;
-    }
-    eventRef.current.setEvents(events);
-    // setChange(false);
-  }, [events]);
-
-  const handleEventSelect = useCallback(
-    async (content: string, slotInfo: SlotInfo) => {
-      const newEvent = await eventService.createEvent(content, slotInfo.start, slotInfo.end);
-      eventService.pushEvent(newEvent);
-      // const events = appStore.getState().eventState.events;
-      // eventRef.current?.setEvents(events);
-    },
-    [StartDate],
-  );
-
-  const handleEventDoubleClick = useCallback(
-    async (event: any) => {
-      if (event.path === undefined) {
-        showEventInDailyNotes(event.id);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error(err);
+        if (isMounted) {
+          new Notice('Failed to fetch data');
+          setIsLoading(false);
+        }
       }
-      // const lineNum = parseInt(event.id.slice(14));
-      // leaf.openFile(event.file, {eState: {line: lineNum}});
-    },
-    [StartDate],
-  );
+    };
 
+    fetchData();
+
+    // Cleanup function to prevent state updates if component unmounts
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Handle event double click
+  const handleEventDoubleClick = useCallback(async (event: any) => {
+    await showEventInDailyNotes(event.id);
+  }, []);
+
+  // Handle event creation
+  const handleEventSelect = useCallback(async (event: EventCreateResult, slotInfo: SlotInfo) => {
+    try {
+      const newEvent = await eventService.createEvent(event.content, event.startDate, event.endDate);
+      eventService.pushEvent(newEvent);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  // Memoize calendar config
   const calendarConfig = useMemo(
     () => ({
       selectable: true,
       resizeable: true,
-      //   events: events,
-      StartDate: StartDate,
-      defaultView: 'month' as View,
+      StartDate: startDay,
+      defaultView: calendarView as View,
       popup: true,
       onEventDoubleClick: handleEventDoubleClick,
       onEventSelect: handleEventSelect,
     }),
-    [StartDate],
+    [handleEventDoubleClick, handleEventSelect, calendarView, startDay],
   );
 
   return (
-    <div className={`big-calendar-wrapper`}>
-      {/* <Only when={isFetching}> */}
-        {useMemo(
-          () => (
-            console.log("render twice"),
-            <CalendarComponent ref={eventRef} {...calendarConfig} />
-          ),
-          [StartDate],
-        )}
-        {/* <CalendarComponent {...calendarConfig} /> */}
-      {/* </Only> */}
+    <div className="big-calendar-wrapper">
+      {isLoading ? <div>Loading...</div> : <CalendarComponent ref={eventRef} {...calendarConfig} />}
     </div>
   );
 };

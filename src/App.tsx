@@ -1,25 +1,14 @@
-import {useContext, useEffect} from 'react';
+import {useEffect} from 'react';
 import Home from './pages/Home';
-import {eventService, globalStateService} from './services';
+import {globalService} from './services';
 import './less/Calendar.less';
-import Provider from './labs/Provider';
-import appContext from './stores/appContext';
-import appStore from './stores/appStore';
-import './helpers/polyfill';
 import React from 'react';
 
-function StrictApp() {
-  return (
-    <Provider store={appStore} context={appContext}>
-      <App />
-    </Provider>
-  );
-}
-
+// Zustand 不需要 Provider，所以直接导出 App 组件
 function App() {
   useEffect(() => {
     const handleWindowResize = () => {
-      globalStateService.setIsMobileView(document.body.clientWidth <= 875);
+      globalService.setIsMobileView(document.body.clientWidth <= 875);
     };
 
     handleWindowResize();
@@ -31,8 +20,6 @@ function App() {
     };
   }, []);
 
-  console.log("render 6th");
-
   return (
     <>
       <Home />
@@ -40,4 +27,4 @@ function App() {
   );
 }
 
-export default StrictApp;
+export default App;

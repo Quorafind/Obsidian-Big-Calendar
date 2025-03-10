@@ -2,25 +2,34 @@ import {Plugin, Notice, Platform, FileView} from 'obsidian';
 import {BigCalendar} from './bigCalendar';
 import {CALENDAR_VIEW_TYPE} from './constants';
 import addIcons from './obComponents/customIcons';
-// import { outputResults } from "./data/parseFile";
 import {BigCalendarSettingTab, DEFAULT_SETTINGS, BigCalendarSettings} from './setting';
 import {t} from './translations/helper';
+import {fileService, eventService, globalService} from './services';
 
 export default class BigCalendarPlugin extends Plugin {
   public settings: BigCalendarSettings;
-  // static settings: any;
+
   async onload(): Promise<void> {
     await this.loadSettings();
-    this.addSettingTab(new BigCalendarSettingTab(this.app, this));
+    globalService.setPluginSetting(this.settings);
 
+    this.app.workspace.onLayoutReady(() => {
+      fileService.setApp(this.app);
+      fileService.initAllFiles();
+      eventService.fetchAllEvents(this.app);
+    });
+
+    // Register view and add icons
     this.registerView(CALENDAR_VIEW_TYPE, (leaf) => new BigCalendar(leaf, this));
-
     addIcons();
+
+    // Add ribbon icon
     this.addRibbonIcon('changeTaskStatus', 'Big Calendar', () => {
       new Notice(t('Open Big Calendar Successfully'));
       this.openCalendar();
     });
 
+    // Add command
     this.addCommand({
       id: 'open-big-calendar',
       name: t('Open Big Calendar'),
@@ -28,49 +37,31 @@ export default class BigCalendarPlugin extends Plugin {
       hotkeys: [],
     });
 
-    await this.loadSettings();
-
-    // this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
-
-    // if (!this.app.workspace.layoutReady) {
-    //   this.app.workspace.onLayoutReady(async () => outputTasksResults());
-    //  } else {
-    //   outputTasksResults();
-    // }
+    // Add settings tab
+    this.addSettingTab(new BigCalendarSettingTab(this.app, this));
   }
 
-  public async loadSettings() {
+  public async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
-  async saveSettings() {
+  async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
   }
 
-  onunload() {
+  onunload(): void {
     this.app.workspace.detachLeavesOfType(CALENDAR_VIEW_TYPE);
-    new Notice('Close Big Calendar Successfully');
+    new Notice(t('Close big calendar successfully'));
   }
 
-  // onLayoutReady(): void {
-  //   if (this.app.workspace.getLeavesOfType(VIEW_TYPE).length) {
-  //     return;
-  //   }
-  //   this.app.workspace.getRightLeaf(false).setViewState({
-  //     type: VIEW_TYPE,
-  //     active: true,
-  //   });
-  // }
-
-  async openCalendar() {
-    // const leaf = this.app.workspace.getLeaf(true);
-    // const neovisView = new BigCalendarView(leaf, this);
-    // await leaf.open(neovisView);
+  async openCalendar(): Promise<void> {
     const workspace = this.app.workspace;
     workspace.detachLeavesOfType(CALENDAR_VIEW_TYPE);
+
     const leaf = workspace.getLeaf(
       !Platform.isMobile && workspace.activeLeaf && workspace.activeLeaf.view instanceof FileView,
     );
+
     await leaf.setViewState({type: CALENDAR_VIEW_TYPE});
     workspace.revealLeaf(leaf);
   }
