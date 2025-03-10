@@ -4,3 +4,7 @@ data.json
 .vscode/
 *.code-workspace
 desktop.ini
+
+main.js
+styles.css
+
