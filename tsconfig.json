@@ -16,5 +16,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "src/ui/dnd.tsx"]
+  "include": ["**/*.ts", "**/*.tsx", "src/ui/dnd.tsx", "vite.config.mts"]
 }
