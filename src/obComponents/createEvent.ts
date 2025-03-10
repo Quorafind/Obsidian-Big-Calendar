@@ -42,33 +42,57 @@ export async function waitForInsert(
     let lineNum: number;
 
     // Format the date
-    const date = startDate instanceof Date ? moment(startDate) : moment(startDate as string);
-    const timeHour = date.format('HH');
-    const timeMinute = date.format('mm');
+    const startMoment = startDate instanceof Date ? moment(startDate) : moment(startDate as string);
+    const startTimeHour = startMoment.format('HH');
+    const startTimeMinute = startMoment.format('mm');
 
-    // Format the event content
-    const formattedContent = `- ${timeHour}:${timeMinute} ${EventContent}`;
+    // Format the content based on whether endDate exists and differs from startDate
+    let formattedContent = `- ${startTimeHour}:${startTimeMinute} ${EventContent}`;
+
+    // Check if endDate exists and is different from startDate
+    if (endDate) {
+      const endMoment = endDate instanceof Date ? moment(endDate) : moment(endDate as string);
+
+      // If end time is different from start time, use time range format
+      if (!endMoment.isSame(startMoment, 'minute')) {
+        const endTimeHour = endMoment.format('HH');
+        const endTimeMinute = endMoment.format('mm');
+        formattedContent = `- ${startTimeHour}:${startTimeMinute}-${endTimeHour}:${endTimeMinute} ${EventContent}`;
+      }
+    }
 
     // Get or create the daily note for this date
     const dailyNotes = await getAllDailyNotes();
-    const existingFile = getDailyNote(date, dailyNotes);
+    const existingFile = getDailyNote(startMoment, dailyNotes);
 
     if (!existingFile) {
       // Create a new daily note if it doesn't exist
-      const file = await createDailyNote(date);
+      const file = await createDailyNote(startMoment);
       const fileContents = await vault.read(file);
       const newFileContent = await insertAfterHandler(settings.InsertAfter, formattedContent, fileContents);
       await vault.modify(file, newFileContent.content);
 
       // Create and return the event object
-      const eventId = date.format('YYYYMMDDHHmmss') + '1';
+      const eventId = startMoment.format('YYYYMMDDHHmmss') + '1';
       return {
         id: eventId,
         title: EventContent,
-        start: new Date(date.year(), date.month(), date.date(), parseInt(timeHour), parseInt(timeMinute)),
+        start: new Date(
+          startMoment.year(),
+          startMoment.month(),
+          startMoment.date(),
+          parseInt(startTimeHour),
+          parseInt(startTimeMinute),
+        ),
         end: endDate
           ? new Date(endDate as any)
-          : new Date(date.year(), date.month(), date.date(), parseInt(timeHour) + 1, parseInt(timeMinute)),
+          : new Date(
+              startMoment.year(),
+              startMoment.month(),
+              startMoment.date(),
+              parseInt(startTimeHour) + 1,
+              parseInt(startTimeMinute),
+            ),
         allDay: false,
         eventType: 'default',
       };
@@ -96,14 +120,26 @@ export async function waitForInsert(
       await vault.modify(existingFile, newFileContent.content);
 
       // Create and return the event object
-      const eventId = date.format('YYYYMMDDHHmmss') + lineNum;
+      const eventId = startMoment.format('YYYYMMDDHHmmss') + lineNum;
       return {
         id: eventId,
         title: EventContent,
-        start: new Date(date.year(), date.month(), date.date(), parseInt(timeHour), parseInt(timeMinute)),
+        start: new Date(
+          startMoment.year(),
+          startMoment.month(),
+          startMoment.date(),
+          parseInt(startTimeHour),
+          parseInt(startTimeMinute),
+        ),
         end: endDate
           ? new Date(endDate as any)
-          : new Date(date.year(), date.month(), date.date(), parseInt(timeHour) + 1, parseInt(timeMinute)),
+          : new Date(
+              startMoment.year(),
+              startMoment.month(),
+              startMoment.date(),
+              parseInt(startTimeHour) + 1,
+              parseInt(startTimeMinute),
+            ),
         allDay: false,
         eventType: 'default',
       };

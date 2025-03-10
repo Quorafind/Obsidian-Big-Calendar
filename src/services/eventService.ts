@@ -5,8 +5,8 @@ import {stringOrDate} from 'react-big-calendar';
 import {deleteForever} from '@/obComponents/deleteEvent';
 import fileService from '@/services/fileService';
 import {parseEventInfoFromLine, lineContainsEvent} from '@/utils/fileParser';
-import {App, TFile} from 'obsidian';
-import {getEvents} from '@/obComponents/getEvents';
+import {App, TFile, moment} from 'obsidian';
+import {getEvents, getEventsFromDailyNote} from '@/obComponents/getEvents';
 import {hideEvent} from '@/obComponents/hideEvent';
 
 /**
@@ -14,6 +14,7 @@ import {hideEvent} from '@/obComponents/hideEvent';
  */
 class EventService {
   public initialized = false;
+  private fileEventMap: Map<string, Model.Event[]> = new Map(); // Map to store events by file path
 
   /**
    * Get the current state of the event store
@@ -30,6 +31,22 @@ class EventService {
     try {
       const data = await getEvents(app);
       const events = Array.isArray(data) ? [...data] : [];
+
+      // Clear all file-event mapping and rebuild
+      this.fileEventMap.clear();
+
+      // Group events by file
+      events.forEach((event) => {
+        // Assuming eventId contains file path or can be mapped to a file
+        const file = fileService.getFile(event.id);
+        if (file) {
+          const filePath = file.path;
+          if (!this.fileEventMap.has(filePath)) {
+            this.fileEventMap.set(filePath, []);
+          }
+          this.fileEventMap.get(filePath)?.push(event);
+        }
+      });
 
       useEventStore.getState().setEvents(events);
 
@@ -106,11 +123,14 @@ class EventService {
    * @returns Updated event or null
    */
   public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate) {
-    useEventStore.getState().editEvent(event);
-
     try {
       if (startDate && endDate && event.id && event.title) {
-        return await changeEvent(
+        // 检查日期是否发生了变化
+        // 记录原始ID以便跟踪
+        const originalEventId = event.id;
+
+        // 先执行changeEvent，让文件更新完成
+        const updatedEvent = await changeEvent(
           event.id,
           event.originalContent || '',
           event.title,
@@ -119,6 +139,20 @@ class EventService {
           endDate,
           new Date(event.end),
         );
+
+        // 如果返回的事件ID与原始ID不同，说明事件被移动并创建了新事件
+        if (updatedEvent.id !== originalEventId) {
+          // 先从状态中删除旧事件
+          useEventStore.getState().deleteEventById(originalEventId);
+          // 再添加新事件到状态
+          useEventStore.getState().insertEvent(updatedEvent);
+          console.log(`Event moved from ID ${originalEventId} to ${updatedEvent.id}`);
+        } else {
+          // 如果ID没变，正常更新事件状态
+          useEventStore.getState().editEvent(updatedEvent);
+        }
+
+        return updatedEvent;
       }
       return event;
     } catch (err) {
@@ -132,6 +166,76 @@ class EventService {
    */
   public clearEvents() {
     useEventStore.getState().setEvents([]);
+    this.fileEventMap.clear();
+  }
+
+  /**
+   * Clear events for a specific file
+   * @param filePath Path of the file
+   */
+  public clearEventsForFile(filePath: string) {
+    // If we don't have this file in our map, nothing to do
+    if (!this.fileEventMap.has(filePath)) {
+      return;
+    }
+
+    // Get all events from the store
+    const currentEvents = [...this.getState().events];
+
+    // Get events to remove (from the file)
+    const eventsToRemove = this.fileEventMap.get(filePath) || [];
+
+    // Filter out events from the specific file
+    const remainingEvents = currentEvents.filter((event) => !eventsToRemove.some((e) => e.id === event.id));
+
+    // Update the store with remaining events
+    useEventStore.getState().setEvents(remainingEvents);
+
+    // Remove file entry from the map
+    this.fileEventMap.delete(filePath);
+  }
+
+  /**
+   * Fetch events from a specific file and update the store
+   * @param app Obsidian App instance
+   * @param file TFile to fetch events from
+   * @returns Array of events from the file
+   */
+  public async fetchEventsFromFile(app: App, file: TFile): Promise<Model.Event[]> {
+    try {
+      // Get events specific to this file
+      const events: Model.Event[] = [];
+      await getEventsFromDailyNote(file, events);
+
+      if (!Array.isArray(events)) {
+        return [];
+      }
+
+      // Store these events in our file-event map
+      this.fileEventMap.set(file.path, [...events]);
+
+      // Get current events (excluding ones from this file if any)
+      const currentEvents = this.getState().events.filter((event) => {
+        // Check if this event is from our file
+        const fileEvents = this.fileEventMap.get(file.path) || [];
+        return !fileEvents.some((e) => e.id === event.id);
+      });
+
+      // Combine with new events from this file
+      const updatedEvents = [...currentEvents, ...events];
+
+      // Update the store
+      useEventStore.getState().setEvents(updatedEvents);
+
+      if (!this.initialized) {
+        this.initialized = true;
+      }
+
+      return events;
+    } catch (error) {
+      console.error(`Failed to fetch events from file ${file.path}:`, error);
+      return [];
+    }
   }
 
   /**

@@ -31,9 +31,11 @@ export class BigCalendar extends ItemView {
 
   private async onFileDeleted(file: TFile): Promise<void> {
     if (getDateFromFile(file, 'day')) {
+      // Get updates only for this specific file's events
+      eventService.clearEventsForFile(file.path);
+
+      // Still need to update our files list, but don't reprocess all events
       await fileService.getAllFiles();
-      eventService.clearEvents();
-      eventService.fetchAllEvents(this.app);
     }
   }
 
@@ -41,18 +43,19 @@ export class BigCalendar extends ItemView {
     const date = getDateFromFile(file, 'day');
 
     if (date && this.root) {
-      // eventService.clearEvents();
-      //   await pushNewEvents(file);
-      eventService.fetchAllEvents(this.app);
+      // Update only events from this specific file
+      await eventService.fetchEventsFromFile(this.app, file);
     }
   }
 
   private onFileCreated(file: TFile): void {
     if (this.app.workspace.layoutReady && this.root) {
       if (getDateFromFile(file, 'day')) {
+        // Update our files list
         fileService.getAllFiles();
-        // eventService.clearEvents();
-        eventService.fetchAllEvents(this.app);
+
+        // Process only events from this new file
+        eventService.fetchEventsFromFile(this.app, file);
       }
     }
   }

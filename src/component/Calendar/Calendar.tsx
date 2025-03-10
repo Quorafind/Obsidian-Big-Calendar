@@ -210,24 +210,28 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
   );
 
   // Handle event drop - Memoize the implementation
-  const onEventDrop = useCallback<withDragAndDropProps['onEventDrop']>(
-    (data) => {
-      const {event, start, end} = data;
-      const eventId = (event as Model.Event).id;
+  const onEventDrop = useCallback<withDragAndDropProps['onEventDrop']>((data) => {
+    const {event, start, end} = data;
 
-      // Update the event in the store
-      updateEvent(eventId, {
-        start: moment(start).toDate(),
-        end: moment(end).toDate(),
+    // 移除本地更新，让状态更新统一由 editEvent 处理
+    // 这样可以避免状态更新和文件更新不同步
+
+    // 直接调用 editEvent，移除 setTimeout
+    eventService
+      .editEvent(event as Model.Event, start, end)
+      .then((updatedEvent) => {
+        if (updatedEvent) {
+          console.log('Event updated successfully:', updatedEvent.id);
+        } else {
+          console.error('Failed to update event');
+        }
+      })
+      .catch((error) => {
+        console.error('Error updating event:', error);
       });
+  }, []);
 
-      // Update the event using the service - use setTimeout to defer
-      setTimeout(() => {
-        eventService.editEvent(event as Model.Event, start, end);
-      }, 0);
-    },
-    [updateEvent],
-  );
+  console.log('events', events);
 
   // Memoize calendar props to prevent unnecessary re-renders
   const calendarProps = useMemo(() => {
@@ -245,7 +249,15 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       popup: calendarPopup,
       onEventDrop: onEventDrop,
       onEventResize: onEventResize,
-      titleAccessor: (event: any) => event.title as string,
+      titleAccessor: (event: any) => {
+        // Remove time patterns from the title for display
+        const title = event.title as string;
+        return title
+          .replace(/\d{1,2}:\d{2}(-\d{1,2}:\d{2})?/g, '') // Remove time ranges like 10:00-11:00
+          .replace(/⏲\s?\d{1,2}:\d{2}/g, '') // Remove end time emoji patterns
+          .replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '') // Remove date patterns
+          .trim();
+      },
       tooltipAccessor: (event: any) => event.title as string,
       onView: handleViewChange,
       onNavigate: handleNavigate,

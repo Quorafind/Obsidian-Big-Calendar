@@ -1,11 +1,13 @@
 import {moment} from 'obsidian';
-import {getDailyNote} from 'obsidian-daily-notes-interface';
+import {TFile, App} from 'obsidian';
 import fileService from '../services/fileService';
-import {TFile} from 'obsidian';
 import {waitForInsert} from './createEvent';
 import {stringOrDate} from 'react-big-calendar';
 // Import from our new API instead of defining locally
 import {createTimeRegex, getAllLinesFromFile, extractEventTime, safeExecute} from '../api';
+import eventService from '../services/eventService';
+// Import getDailyNote from obsidian-daily-notes-interface
+import {getDailyNote, getAllDailyNotes} from 'obsidian-daily-notes-interface';
 
 /**
  * Changes an existing event with new content and dates
@@ -30,116 +32,372 @@ export async function changeEvent(
 ): Promise<Model.Event> {
   return await safeExecute(async () => {
     const {app} = fileService.getState();
-    const files = await fileService.getAllFiles();
+    const files = await getAllDailyNotes();
 
-    // Use our new regex function instead of inline regex
-    const timeRegex = createTimeRegex();
-
+    // Parse dates
     const startTimeString = eventid.slice(0, 13) + '00';
     const originalStartDate = moment(startTimeString, 'YYYYMMDDHHmmSS');
-
-    const dailyNote = getDailyNote(originalStartDate, files);
-    if (!dailyNote) {
-      throw new Error(`Daily note not found for date: ${originalStartDate.format('YYYY-MM-DD')}`);
-    }
-
-    const fileContent = await app.vault.read(dailyNote);
-    const fileLines = getAllLinesFromFile(fileContent);
-
     const eventStartMoment = moment(eventStartDate);
     const eventEndMoment = moment(eventEndDate);
     const originalEndMoment = moment(originalEndDate);
 
-    // Find the line with the event
-    let lineIndex = -1;
-    let originalLine = '';
+    // Check what has changed
+    const startDateChanged = !originalStartDate.isSame(eventStartMoment, 'day');
+    const endDateChanged = !originalEndMoment.isSame(eventEndMoment, 'day');
+    const sameDayEvent = eventStartMoment.isSame(eventEndMoment, 'day');
+    const timeIntervalChanged =
+      !eventStartMoment.isSame(originalStartDate, 'minute') || !eventEndMoment.isSame(originalEndMoment, 'minute');
 
-    for (let i = 0; i < fileLines.length; i++) {
-      const line = fileLines[i];
-      if (line.includes(originalContent) || (line.startsWith('- ') && timeRegex.test(line))) {
-        const timeInfo = extractEventTime(line);
-        if (timeInfo) {
-          const {hour, minute} = timeInfo;
-          const lineTime = moment(originalStartDate).set({hour, minute});
+    console.log(startDateChanged, endDateChanged, timeIntervalChanged);
 
-          if (lineTime.format('YYYYMMDDHHmm') === eventid.slice(0, 12)) {
-            lineIndex = i;
-            originalLine = line;
-            break;
-          }
+    // Case 1: Only time interval changed, dates remain the same
+    if (timeIntervalChanged && !startDateChanged && !endDateChanged) {
+      return await updateTimeIntervalOnly(
+        eventid,
+        originalContent,
+        content,
+        eventType,
+        originalStartDate,
+        eventStartMoment,
+        eventEndMoment,
+        files,
+        app,
+      );
+    }
+
+    // Case 2: Only end date changed
+    if (!startDateChanged && endDateChanged) {
+      return await updateEndDateOnly(
+        eventid,
+        originalContent,
+        content,
+        eventType,
+        originalStartDate,
+        eventStartMoment,
+        eventEndMoment,
+        files,
+        app,
+      );
+    }
+
+    // Case 3: Both start and end dates changed
+    if (startDateChanged) {
+      return await moveEventToNewDay(
+        eventid,
+        originalContent,
+        content,
+        eventType,
+        originalStartDate,
+        eventStartMoment,
+        eventEndMoment,
+        sameDayEvent,
+        files,
+        app,
+      );
+    }
+
+    // Fallback - should not normally reach here
+    return await updateTimeIntervalOnly(
+      eventid,
+      originalContent,
+      content,
+      eventType,
+      originalStartDate,
+      eventStartMoment,
+      eventEndMoment,
+      files,
+      app,
+    );
+  }, 'Failed to update event');
+}
+
+/**
+ * Updates only the time interval of an event
+ * Case 1: Start and end dates remain the same, only time interval changed
+ */
+async function updateTimeIntervalOnly(
+  eventid: string,
+  originalContent: string,
+  content: string,
+  eventType: string,
+  originalStartDate: moment.Moment,
+  eventStartMoment: moment.Moment,
+  eventEndMoment: moment.Moment,
+  files: Record<string, TFile>,
+  app: App,
+): Promise<Model.Event> {
+  // Get the original daily note
+  const dailyNote = getDailyNote(originalStartDate, files);
+  if (!dailyNote) {
+    throw new Error(`Daily note not found for date: ${originalStartDate.format('YYYY-MM-DD')}`);
+  }
+
+  // Read file content
+  const fileContent = await app.vault.read(dailyNote);
+  const fileLines = getAllLinesFromFile(fileContent);
+
+  // Use our new regex function instead of inline regex
+  const timeRegex = createTimeRegex();
+
+  // Find the line with the event
+  let lineIndex = -1;
+  let originalLine = '';
+
+  for (let i = 0; i < fileLines.length; i++) {
+    const line = fileLines[i];
+    if (line.includes(originalContent) || (line.startsWith('- ') && timeRegex.test(line))) {
+      const timeInfo = extractEventTime(line);
+      if (timeInfo) {
+        const {hour, minute} = timeInfo;
+        const lineTime = moment(originalStartDate).set({hour, minute});
+
+        if (lineTime.format('YYYYMMDDHHmm') === eventid.slice(0, 12)) {
+          lineIndex = i;
+          originalLine = line;
+          break;
         }
       }
     }
+  }
 
-    if (lineIndex === -1) {
-      // If we can't find the event in the original file, create a new one
-      return await waitForInsert(content, eventStartDate, eventEndDate);
-    }
+  if (lineIndex === -1) {
+    // If we can't find the event in the original file, create a new one
+    return await waitForInsert(content, eventStartMoment.toDate(), eventEndMoment.toDate());
+  }
 
-    // Format the new event line
-    const timeHour = eventStartMoment.format('HH');
-    const timeMinute = eventStartMoment.format('mm');
+  // Format the new event line with updated time interval
+  const cleanContent = cleanEventContent(originalContent, content);
+  const newLine = formatEventLine(cleanContent, eventStartMoment, eventEndMoment);
 
-    // Extract the content without any time information
-    let cleanContent = content;
+  // Update the file
+  fileLines[lineIndex] = newLine;
+  const newFileContent = fileLines.join('\n');
+  await app.vault.modify(dailyNote, newFileContent);
 
-    // If the original content is in the new content, we may need to clean it up
-    if (originalContent && content.includes(originalContent)) {
-      cleanContent = originalContent;
-    }
+  // Return the updated event
+  return {
+    id: eventid,
+    title: cleanContent,
+    start: eventStartMoment.toDate(),
+    end: eventEndMoment.toDate(),
+    allDay: false,
+    eventType: eventType || 'default',
+  };
+}
 
-    // Remove any existing time patterns (HH:MM) from the content
-    cleanContent = cleanContent.replace(/\d{1,2}:\d{2}/g, '').trim();
-    // Remove any existing end time emoji patterns
-    cleanContent = cleanContent.replace(/⏲\s?\d{1,2}:\d{2}/g, '').trim();
-    // Remove any existing date patterns
-    cleanContent = cleanContent.replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '').trim();
-    // Remove any time range patterns
-    cleanContent = cleanContent.replace(/\d{1,2}:\d{2}-\d{1,2}:\d{2}/g, '').trim();
+/**
+ * Updates only the end date of an event
+ * Case 2: Start date remains the same, only end date changed
+ */
+async function updateEndDateOnly(
+  eventid: string,
+  originalContent: string,
+  content: string,
+  eventType: string,
+  originalStartDate: moment.Moment,
+  eventStartMoment: moment.Moment,
+  eventEndMoment: moment.Moment,
+  files: Record<string, TFile>,
+  app: App,
+): Promise<Model.Event> {
+  // This is similar to Case 1, but makes sure to update end date reference
+  const dailyNote = getDailyNote(originalStartDate, files);
+  if (!dailyNote) {
+    throw new Error(`Daily note not found for date: ${originalStartDate.format('YYYY-MM-DD')}`);
+  }
 
-    // If the cleaned content is different from the original input content,
-    // and it doesn't seem like a cleanup of the originalContent, use the input content
-    if (cleanContent !== content && !originalContent.includes(cleanContent)) {
-      cleanContent = content.replace(/^\d{1,2}:\d{2}(-\d{1,2}:\d{2})?\s+/, '').trim();
-    }
+  // Read file content
+  const fileContent = await app.vault.read(dailyNote);
+  const fileLines = getAllLinesFromFile(fileContent);
 
-    let newLine = `- ${timeHour}:${timeMinute}`;
+  // Use our new regex function
+  const timeRegex = createTimeRegex();
 
-    // Add end time if needed
-    if (eventEndMoment.isAfter(eventStartMoment)) {
-      // Check if the start and end dates are the same
-      const sameDay = eventStartMoment.isSame(eventEndMoment, 'day');
+  // Find the line with the event
+  let lineIndex = -1;
+  let originalLine = '';
 
-      if (sameDay) {
-        // For same-day events, use a time range format (HH:MM-HH:MM)
-        newLine = `- ${timeHour}:${timeMinute}-${eventEndMoment.format('HH:mm')}`;
-      } else {
-        // For multi-day events, add the end date with calendar emoji
-        newLine = `- ${timeHour}:${timeMinute}`;
-        newLine += ` 📅 ${eventEndMoment.format('YYYY-MM-DD')}`;
-        // Add end time
-        newLine += ` ⏲ ${eventEndMoment.format('HH:mm')}`;
+  for (let i = 0; i < fileLines.length; i++) {
+    const line = fileLines[i];
+    if (line.includes(originalContent) || (line.startsWith('- ') && timeRegex.test(line))) {
+      const timeInfo = extractEventTime(line);
+      if (timeInfo) {
+        const {hour, minute} = timeInfo;
+        const lineTime = moment(originalStartDate).set({hour, minute});
+
+        if (lineTime.format('YYYYMMDDHHmm') === eventid.slice(0, 12)) {
+          lineIndex = i;
+          originalLine = line;
+          break;
+        }
       }
     }
+  }
 
-    // Add the clean content
-    newLine += ` ${cleanContent}`;
+  if (lineIndex === -1) {
+    // If we can't find the event in the original file, create a new one
+    return await waitForInsert(content, eventStartMoment.toDate(), eventEndMoment.toDate());
+  }
 
-    // Update the file
-    fileLines[lineIndex] = newLine;
-    const newFileContent = fileLines.join('\n');
-    await app.vault.modify(dailyNote, newFileContent);
+  // Clean content and format with new end date
+  const cleanContent = cleanEventContent(originalContent, content);
+  const newLine = formatEventLine(cleanContent, eventStartMoment, eventEndMoment);
 
-    // Return the updated event
-    return {
-      id: eventid,
-      title: cleanContent, // Use the clean content as the title
-      start: eventStartMoment.toDate(),
-      end: eventEndMoment.toDate(),
-      allDay: false,
-      eventType: eventType || 'default',
-    };
-  }, 'Failed to update event');
+  // Update the file
+  fileLines[lineIndex] = newLine;
+  const newFileContent = fileLines.join('\n');
+  await app.vault.modify(dailyNote, newFileContent);
+
+  // Return the updated event
+  return {
+    id: eventid,
+    title: cleanContent,
+    start: eventStartMoment.toDate(),
+    end: eventEndMoment.toDate(),
+    allDay: false,
+    eventType: eventType || 'default',
+  };
+}
+
+/**
+ * Moves an event to a new day
+ * Case 3: Start date changed (and possibly end date too)
+ */
+async function moveEventToNewDay(
+  eventid: string,
+  originalContent: string,
+  content: string,
+  eventType: string,
+  originalStartDate: moment.Moment,
+  eventStartMoment: moment.Moment,
+  eventEndMoment: moment.Moment,
+  sameDayEvent: boolean,
+  files: Record<string, TFile>,
+  app: App,
+): Promise<Model.Event> {
+  // Get the original daily note
+  const originalDailyNote = getDailyNote(originalStartDate, files);
+  if (!originalDailyNote) {
+    throw new Error(`Original daily note not found for date: ${originalStartDate.format('YYYY-MM-DD')}`);
+  }
+
+  // Read original file content
+  const fileContent = await app.vault.read(originalDailyNote);
+  const fileLines = getAllLinesFromFile(fileContent);
+
+  // Use our new regex function
+  const timeRegex = createTimeRegex();
+
+  // Find the line with the event
+  let lineIndex = -1;
+  let originalLine = '';
+
+  for (let i = 0; i < fileLines.length; i++) {
+    const line = fileLines[i];
+    if (line.includes(originalContent) || (line.startsWith('- ') && timeRegex.test(line))) {
+      const timeInfo = extractEventTime(line);
+      if (timeInfo) {
+        const {hour, minute} = timeInfo;
+        const lineTime = moment(originalStartDate).set({hour, minute});
+
+        if (lineTime.format('YYYYMMDDHHmm') === eventid.slice(0, 12)) {
+          lineIndex = i;
+          originalLine = line;
+          break;
+        }
+      }
+    }
+  }
+
+  if (lineIndex === -1) {
+    // If we can't find the event in the original file, create a new one
+    return await waitForInsert(content, eventStartMoment.toDate(), eventEndMoment.toDate());
+  }
+
+  // Remove the event from the old file
+  fileLines.splice(lineIndex, 1);
+  const newFileContent = fileLines.join('\n');
+  await app.vault.modify(originalDailyNote, newFileContent);
+
+  // Clean the content
+  let cleanContent = content;
+
+  // Remove any existing time patterns
+  cleanContent = cleanContent.replace(/^\d{1,2}:\d{2}(-\d{1,2}:\d{2})?\s+/, '').trim();
+  // Remove any existing end time patterns
+  cleanContent = cleanContent.replace(/⏲\s?\d{1,2}:\d{2}/g, '').trim();
+  // Remove any existing date patterns
+  cleanContent = cleanContent.replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '').trim();
+
+  // Create a new event in the new day's note
+  const newEvent = await waitForInsert(cleanContent, eventStartMoment.toDate(), eventEndMoment.toDate());
+
+  // 只从状态中删除旧事件，不再在这里添加新事件
+  // 让eventService.editEvent负责添加新事件到状态
+  eventService.getState().deleteEventById(eventid);
+
+  return newEvent;
+}
+
+/**
+ * Cleans the event content by removing time and date information
+ */
+function cleanEventContent(originalContent: string, content: string): string {
+  let cleanContent = content;
+
+  // If the original content is in the new content, we may need to clean it up
+  if (originalContent && content.includes(originalContent)) {
+    cleanContent = originalContent;
+  }
+
+  // Remove any existing time patterns
+  cleanContent = cleanContent.replace(/^\d{1,2}:\d{2}(-\d{1,2}:\d{2})?\s+/, '').trim();
+  // Remove any existing end time patterns
+  cleanContent = cleanContent.replace(/⏲\s?\d{1,2}:\d{2}/g, '').trim();
+  // Remove any existing date patterns
+  cleanContent = cleanContent.replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '').trim();
+  // Remove any time range patterns
+  cleanContent = cleanContent.replace(/\d{1,2}:\d{2}-\d{1,2}:\d{2}/g, '').trim();
+
+  // If the cleaned content is different from the original input content,
+  // and it doesn't seem like a cleanup of the originalContent, use the input content
+  if (cleanContent !== content && !originalContent.includes(cleanContent)) {
+    cleanContent = content.replace(/^\d{1,2}:\d{2}(-\d{1,2}:\d{2})?\s+/, '').trim();
+  }
+
+  return cleanContent;
+}
+
+/**
+ * Formats an event line with the provided content and timestamps
+ */
+function formatEventLine(cleanContent: string, startMoment: moment.Moment, endMoment: moment.Moment): string {
+  const timeHour = startMoment.format('HH');
+  const timeMinute = startMoment.format('mm');
+
+  let newLine = `- ${timeHour}:${timeMinute}`;
+
+  // Add end time if needed
+  if (endMoment.isAfter(startMoment)) {
+    // Check if the start and end dates are the same
+    const sameDay = startMoment.isSame(endMoment, 'day');
+
+    if (sameDay) {
+      // For same-day events, use a time range format (HH:MM-HH:MM)
+      newLine = `- ${timeHour}:${timeMinute}-${endMoment.format('HH:mm')}`;
+    } else {
+      // For multi-day events, add the end date with calendar emoji
+      newLine = `- ${timeHour}:${timeMinute}`;
+      newLine += ` 📅 ${endMoment.format('YYYY-MM-DD')}`;
+      // Add end time
+      newLine += ` ⏲ ${endMoment.format('HH:mm')}`;
+    }
+  }
+
+  // Add the clean content
+  newLine += ` ${cleanContent}`;
+
+  return newLine;
 }
 
 /**
