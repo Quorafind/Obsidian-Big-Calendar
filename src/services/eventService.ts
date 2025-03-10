@@ -5,7 +5,7 @@ import {stringOrDate} from 'react-big-calendar';
 import {deleteForever} from '@/obComponents/deleteEvent';
 import fileService from '@/services/fileService';
 import {parseEventInfoFromLine, lineContainsEvent} from '@/utils/fileParser';
-import {TFile} from 'obsidian';
+import {App, TFile} from 'obsidian';
 import {getEvents} from '@/obComponents/getEvents';
 import {hideEvent} from '@/obComponents/hideEvent';
 
@@ -26,9 +26,9 @@ class EventService {
    * Fetch all events and update the store
    * @returns Array of all events
    */
-  public async fetchAllEvents() {
+  public async fetchAllEvents(app: App) {
     try {
-      const data = await getEvents();
+      const data = await getEvents(app);
       const events = Array.isArray(data) ? [...data] : [];
 
       useEventStore.getState().setEvents(events);
@@ -194,8 +194,16 @@ class EventService {
       return null;
     }
 
+    // Clean the line to extract just the content without time information
+    let title = line.trim();
+
+    // Remove time patterns
+    title = title.replace(/^- \d{1,2}:\d{2}(-\d{1,2}:\d{2})?\s+/, '- ');
+    title = title.replace(/⏲\s?\d{1,2}:\d{2}/g, '').trim();
+    title = title.replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '').trim();
+
     const result: Partial<Model.Event> = {
-      title: line.trim(),
+      title: title,
     };
 
     // Add date information if available

@@ -8,9 +8,12 @@ import eventService from '@/services/eventService';
 import useFileStore from '@/stores/fileStore';
 import useCalendarStore from '@/stores/calendarStore';
 import EventCreatePrompt, {EventCreateResult} from '@/obComponents/EventCreatePrompt';
+import {useEvents} from '@/hooks/useStore';
+import useEventStore from '@/stores/eventStore';
+import {updateEvent} from '@/api';
 
 export interface EventRefActions {
-  setEvents: (events: Model.Event[]) => void;
+  updateEvents: (events: Model.Event[]) => void;
 }
 
 interface CalendarProps {
@@ -41,28 +44,26 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
   // Get app from fileStore
   const app = useFileStore((state) => state.app);
 
-  // Use individual selectors instead of the entire store
-  // This prevents unnecessary re-renders when unrelated parts of the store change
-  const events = useCalendarStore((state) => state.events);
-  const calendarView = useCalendarStore((state) => state.calendarView);
-  const calendarDate = useCalendarStore((state) => state.calendarDate);
-  const select = useCalendarStore((state) => state.selectable);
-  const resize = useCalendarStore((state) => state.resizable);
-  const calendarPopup = useCalendarStore((state) => state.calendarPopup);
-
-  // Get store actions
-  const setEvents = useCalendarStore((state) => state.setEvents);
-  const setCalendarView = useCalendarStore((state) => state.setCalendarView);
-  const setCalendarDate = useCalendarStore((state) => state.setCalendarDate);
-  const setSelectable = useCalendarStore((state) => state.setSelectable);
-  const setResizable = useCalendarStore((state) => state.setResizable);
-  const setCalendarPopup = useCalendarStore((state) => state.setCalendarPopup);
-  const setStartDay = useCalendarStore((state) => state.setStartDay);
-  const setLoading = useCalendarStore((state) => state.setLoading);
-  const loadStoredPreferences = useCalendarStore((state) => state.loadStoredPreferences);
-  const saveCalendarView = useCalendarStore((state) => state.saveCalendarView);
-  const saveCalendarDate = useCalendarStore((state) => state.saveCalendarDate);
-  const updateEvent = useCalendarStore((state) => state.updateEvent);
+  const events = useEvents();
+  const updateEvent = useEventStore((state) => state.updateEvent);
+  // Get state and actions from the calendar store
+  const {
+    calendarView,
+    calendarDate,
+    selectable: select,
+    resizable: resize,
+    calendarPopup,
+    setCalendarView,
+    setCalendarDate,
+    setSelectable,
+    setResizable,
+    setCalendarPopup,
+    setStartDay,
+    setLoading,
+    loadStoredPreferences,
+    saveCalendarView,
+    saveCalendarDate,
+  } = useCalendarStore();
 
   // Create a memoized localizer
   const localizer = useMemo(() => momentLocalizer(moment), []);
@@ -121,23 +122,6 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
     setLoading,
   ]);
 
-  // Forward ref implementation for event management - Memoize to prevent unnecessary updates
-  useEffect(() => {
-    if (!ref) return;
-
-    // @ts-ignore - ForwardedRef type issue
-    ref.current = {
-      setEvents: (newEvents: Model.Event[]) => {
-        if (newEvents && newEvents.length > 0 && newEvents !== events) {
-          // Use setTimeout to break circular dependency
-          setTimeout(() => {
-            setEvents(newEvents);
-          }, 0);
-        }
-      },
-    };
-  }, [ref, events, setEvents]);
-
   // Style events based on their type
   const styleEvents = useCallback((event: any) => {
     const className = event.eventType;
@@ -177,8 +161,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
     (view: View) => {
       if (calendarView !== view) {
         setCalendarView(view);
-
-        // Use setTimeout to prevent immediate state changes
+        // Save the view change to storage
         if (app) {
           setTimeout(() => {
             saveCalendarView(app);
@@ -186,7 +169,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
         }
       }
     },
-    [calendarView, app, setCalendarView, saveCalendarView],
+    [calendarView, setCalendarView, app, saveCalendarView],
   );
 
   // Handle navigation (date changes)
@@ -195,7 +178,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       if (calendarDate !== date) {
         setCalendarDate(date);
 
-        // Use setTimeout to prevent immediate state changes
+        // Save the date change to storage
         if (app) {
           setTimeout(() => {
             saveCalendarDate(app);
@@ -203,7 +186,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
         }
       }
     },
-    [calendarDate, app, setCalendarDate, saveCalendarDate],
+    [calendarDate, setCalendarDate, app, saveCalendarDate],
   );
 
   // Handle event resize - Memoize the implementation
@@ -255,6 +238,8 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       resizable: resize,
       defaultView: calendarView,
       defaultDate: calendarDate,
+      date: calendarDate,
+      view: calendarView,
       style: {height: '90vh'},
       eventPropGetter: styleEvents,
       popup: calendarPopup,
@@ -271,9 +256,9 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
     select,
     localizer,
     events,
+    calendarDate,
     resize,
     calendarView,
-    calendarDate,
     styleEvents,
     calendarPopup,
     onEventDrop,

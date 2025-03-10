@@ -1384,3 +1384,11 @@
   flex-wrap: wrap;
   border: 1px #cfcece dashed;
 }
+button.rbc-button-link {
+  box-shadow: none;
+  background-color: unset;
+  padding: 0;
+}
+.rbc-toolbar button {
+  box-shadow: none;
+}

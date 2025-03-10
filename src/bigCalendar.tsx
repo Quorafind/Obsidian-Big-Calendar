@@ -33,7 +33,7 @@ export class BigCalendar extends ItemView {
     if (getDateFromFile(file, 'day')) {
       await fileService.getAllFiles();
       eventService.clearEvents();
-      eventService.fetchAllEvents();
+      eventService.fetchAllEvents(this.app);
     }
   }
 
@@ -43,7 +43,7 @@ export class BigCalendar extends ItemView {
     if (date && this.root) {
       // eventService.clearEvents();
       //   await pushNewEvents(file);
-      eventService.fetchAllEvents();
+      eventService.fetchAllEvents(this.app);
     }
   }
 
@@ -52,7 +52,7 @@ export class BigCalendar extends ItemView {
       if (getDateFromFile(file, 'day')) {
         fileService.getAllFiles();
         // eventService.clearEvents();
-        eventService.fetchAllEvents();
+        eventService.fetchAllEvents(this.app);
       }
     }
   }

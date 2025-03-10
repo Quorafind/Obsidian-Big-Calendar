@@ -12,6 +12,7 @@ export interface EventState {
   insertEvent: (event: Model.Event) => void;
   deleteEventById: (id: string) => void;
   editEvent: (event: Model.Event) => void;
+  updateEvent: (eventId: string, updates: Partial<Model.Event>) => void;
 }
 
 // Create the store using Zustand
@@ -100,6 +101,28 @@ const useEventStore = create<EventState>((set, get) => ({
         events: newEvents,
       };
     }),
+
+  updateEvent: (eventId, updates) => {
+    // Get current events
+    const events = get().events;
+
+    // Find the event to update
+    const eventIndex = events.findIndex((event) => event.id === eventId);
+
+    // If event not found, do nothing
+    if (eventIndex === -1) {
+      return;
+    }
+
+    // Create new array with updated event
+    const updatedEvents = [...events];
+    updatedEvents[eventIndex] = {
+      ...updatedEvents[eventIndex],
+      ...updates,
+    };
+
+    set({events: updatedEvents});
+  },
 }));
 
 export default useEventStore;

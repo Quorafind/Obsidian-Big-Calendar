@@ -1,6 +1,8 @@
 // Credits go to Schemar's Tasks Plugin: https://github.dev/schemar/obsidian-tasks
 
+import {moment} from 'obsidian';
 import {Recurrence} from './parseTasksRecurrence';
+import {parseLine, TaskStatus as ParserTaskStatus, DateInfo} from './parser';
 
 export enum Status {
   Todo = 'Todo',
@@ -47,6 +49,7 @@ export class Task {
     dueDate,
     doneDate,
     recurrence,
+    blockLink = '',
   }: {
     status: Status;
     description: string;
@@ -57,6 +60,7 @@ export class Task {
     dueDate: moment.Moment | null;
     doneDate: moment.Moment | null;
     recurrence: Recurrence | null;
+    blockLink?: string;
   }) {
     this.status = status;
     this.description = description;
@@ -66,102 +70,85 @@ export class Task {
     this.scheduledDate = scheduledDate;
     this.dueDate = dueDate;
     this.doneDate = doneDate;
-
     this.recurrence = recurrence;
+    this.blockLink = blockLink;
   }
 
-  public static fromLine({line, path}: {line: string; path: string; precedingHeader: string | null}): Task | null {
-    const regexMatch = line.match(Task.taskRegex);
-    if (regexMatch === null) {
+  public static fromLine({
+    line,
+    path,
+    precedingHeader,
+  }: {
+    line: string;
+    path: string;
+    precedingHeader: string | null;
+  }): Task | null {
+    // Use the new parser for more efficient and comprehensive parsing
+    const parsedLine = parseLine(line);
+
+    // If it's not a task, return null
+    if (!parsedLine.isTask) {
       return null;
     }
 
-    const statusString = regexMatch[2].toLowerCase();
-
+    // Map the parser's TaskStatus to our Status enum
     let status: Status;
-    switch (statusString) {
-      case ' ':
+    switch (parsedLine.taskStatus) {
+      case ParserTaskStatus.Todo:
         status = Status.Todo;
         break;
       default:
         status = Status.Done;
     }
 
-    // match[3] includes the whole body of the task after the brackets.
-    const body = regexMatch[3].trim();
-
-    let description = body;
-
-    // Keep matching and removing special strings from the end of the
-    // description in any order. The loop should only run once if the
-    // strings are in the expected order after the description.
-    let matched: boolean;
+    // Extract dates from the parsedLine
     let startDate: moment.Moment | null = null;
     let scheduledDate: moment.Moment | null = null;
     let dueDate: moment.Moment | null = null;
     let doneDate: moment.Moment | null = null;
+
+    // Map the dates from parsedLine.dates to our date fields
+    for (const dateInfo of parsedLine.dates) {
+      switch (dateInfo.type) {
+        case 'start':
+          startDate = dateInfo.moment;
+          break;
+        case 'scheduled':
+          scheduledDate = dateInfo.moment;
+          break;
+        case 'due':
+          dueDate = dateInfo.moment;
+          break;
+        case 'done':
+          doneDate = dateInfo.moment;
+          break;
+      }
+    }
+
+    // Extract recurrence information
     let recurrence: Recurrence | null = null;
-    // Add a "max runs" failsafe to never end in an endless loop:
-    const maxRuns = 7;
-    let runs = 0;
-    do {
-      matched = false;
-
-      const doneDateMatch = description.match(Task.doneDateRegex);
-      if (doneDateMatch !== null) {
-        doneDate = window.moment(doneDateMatch[1], Task.dateFormat);
-        description = description.replace(Task.doneDateRegex, '').trim();
-        matched = true;
-      }
-
-      const dueDateMatch = description.match(Task.dueDateRegex);
-      if (dueDateMatch !== null) {
-        dueDate = window.moment(dueDateMatch[1], Task.dateFormat);
-        description = description.replace(Task.dueDateRegex, '').trim();
-        matched = true;
-      }
-
-      const scheduledDateMatch = description.match(Task.scheduledDateRegex);
-      if (scheduledDateMatch !== null) {
-        scheduledDate = window.moment(scheduledDateMatch[1], Task.dateFormat);
-        description = description.replace(Task.scheduledDateRegex, '').trim();
-        matched = true;
-      }
-
-      const startDateMatch = description.match(Task.startDateRegex);
-      if (startDateMatch !== null) {
-        startDate = window.moment(startDateMatch[1], Task.dateFormat);
-        description = description.replace(Task.startDateRegex, '').trim();
-        matched = true;
-      }
-
-      const recurrenceMatch = description.match(Task.recurrenceRegex);
-      if (recurrenceMatch !== null) {
-        recurrence = Recurrence.fromText({
-          recurrenceRuleText: recurrenceMatch[1].trim(),
-          startDate,
-          scheduledDate,
-          dueDate,
-        });
-
-        description = description.replace(Task.recurrenceRegex, '').trim();
-        matched = true;
-      }
-
-      runs++;
-    } while (matched && runs <= maxRuns);
+    if (parsedLine.hasRecurrence && parsedLine.recurrenceRule) {
+      recurrence = Recurrence.fromText({
+        recurrenceRuleText: parsedLine.recurrenceRule,
+        startDate,
+        scheduledDate,
+        dueDate,
+      });
+    }
 
     const task = new Task({
       status,
-      description,
+      description: parsedLine.content,
       path,
-      originalStatusCharacter: statusString,
+      originalStatusCharacter: parsedLine.statusCharacter || '',
       startDate,
       scheduledDate,
       dueDate,
       doneDate,
       recurrence,
+      blockLink: parsedLine.blockLink || '',
     });
+
     return task;
   }
 }

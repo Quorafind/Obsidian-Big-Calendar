@@ -10,10 +10,11 @@ export * from './utils/fileParser';
 // Import services
 import fileService from './services/fileService';
 import eventService from './services/eventService';
+import {App} from 'obsidian';
 
 // Event-related functions
-export const getEvents = async () => {
-  return await eventService.fetchAllEvents();
+export const getEvents = async (app: App) => {
+  return await eventService.fetchAllEvents(app);
 };
 
 export const createEvent = async (content: string, date: Date): Promise<string> => {

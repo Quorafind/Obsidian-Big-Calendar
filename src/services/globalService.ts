@@ -59,7 +59,6 @@ class GlobalService {
   };
 
   public setPluginSetting = (pluginSetting: BigCalendarSettings) => {
-    console.log(pluginSetting);
     useGlobalStateStore.getState().setPluginSetting(pluginSetting);
   };
 }

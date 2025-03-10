@@ -12,12 +12,11 @@ export default class BigCalendarPlugin extends Plugin {
   async onload(): Promise<void> {
     await this.loadSettings();
     globalService.setPluginSetting(this.settings);
-    console.log(this.settings, globalService.getState().pluginSetting);
 
     this.app.workspace.onLayoutReady(() => {
       fileService.setApp(this.app);
       fileService.initAllFiles();
-      eventService.fetchAllEvents();
+      eventService.fetchAllEvents(this.app);
     });
 
     // Register view and add icons

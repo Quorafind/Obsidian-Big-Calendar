@@ -48,9 +48,11 @@ export async function changeEvent(
 
     const eventStartMoment = moment(eventStartDate);
     const eventEndMoment = moment(eventEndDate);
+    const originalEndMoment = moment(originalEndDate);
 
     // Find the line with the event
     let lineIndex = -1;
+    let originalLine = '';
 
     for (let i = 0; i < fileLines.length; i++) {
       const line = fileLines[i];
@@ -62,6 +64,7 @@ export async function changeEvent(
 
           if (lineTime.format('YYYYMMDDHHmm') === eventid.slice(0, 12)) {
             lineIndex = i;
+            originalLine = line;
             break;
           }
         }
@@ -76,18 +79,51 @@ export async function changeEvent(
     // Format the new event line
     const timeHour = eventStartMoment.format('HH');
     const timeMinute = eventStartMoment.format('mm');
-    let newLine = `- ${timeHour}:${timeMinute} ${content}`;
+
+    // Extract the content without any time information
+    let cleanContent = content;
+
+    // If the original content is in the new content, we may need to clean it up
+    if (originalContent && content.includes(originalContent)) {
+      cleanContent = originalContent;
+    }
+
+    // Remove any existing time patterns (HH:MM) from the content
+    cleanContent = cleanContent.replace(/\d{1,2}:\d{2}/g, '').trim();
+    // Remove any existing end time emoji patterns
+    cleanContent = cleanContent.replace(/⏲\s?\d{1,2}:\d{2}/g, '').trim();
+    // Remove any existing date patterns
+    cleanContent = cleanContent.replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '').trim();
+    // Remove any time range patterns
+    cleanContent = cleanContent.replace(/\d{1,2}:\d{2}-\d{1,2}:\d{2}/g, '').trim();
+
+    // If the cleaned content is different from the original input content,
+    // and it doesn't seem like a cleanup of the originalContent, use the input content
+    if (cleanContent !== content && !originalContent.includes(cleanContent)) {
+      cleanContent = content.replace(/^\d{1,2}:\d{2}(-\d{1,2}:\d{2})?\s+/, '').trim();
+    }
+
+    let newLine = `- ${timeHour}:${timeMinute}`;
 
     // Add end time if needed
     if (eventEndMoment.isAfter(eventStartMoment)) {
-      if (eventEndMoment.diff(eventStartMoment, 'days') > 0) {
-        // Multi-day event
-        newLine += ` 📅 ${eventEndMoment.format('YYYY-MM-DD')}`;
-      }
+      // Check if the start and end dates are the same
+      const sameDay = eventStartMoment.isSame(eventEndMoment, 'day');
 
-      // Add end time
-      newLine += ` ⏲ ${eventEndMoment.format('HH:mm')}`;
+      if (sameDay) {
+        // For same-day events, use a time range format (HH:MM-HH:MM)
+        newLine = `- ${timeHour}:${timeMinute}-${eventEndMoment.format('HH:mm')}`;
+      } else {
+        // For multi-day events, add the end date with calendar emoji
+        newLine = `- ${timeHour}:${timeMinute}`;
+        newLine += ` 📅 ${eventEndMoment.format('YYYY-MM-DD')}`;
+        // Add end time
+        newLine += ` ⏲ ${eventEndMoment.format('HH:mm')}`;
+      }
     }
+
+    // Add the clean content
+    newLine += ` ${cleanContent}`;
 
     // Update the file
     fileLines[lineIndex] = newLine;
@@ -97,7 +133,7 @@ export async function changeEvent(
     // Return the updated event
     return {
       id: eventid,
-      title: content,
+      title: cleanContent, // Use the clean content as the title
       start: eventStartMoment.toDate(),
       end: eventEndMoment.toDate(),
       allDay: false,
@@ -132,6 +168,13 @@ export function getDailyNotePath(): string {
  * @returns The end hour or 0 if not found
  */
 export function extractEventEndHourFromLine(line: string): number {
+  // First check for the time range format (HH:MM-HH:MM)
+  const rangeMatch = /(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/.exec(line);
+  if (rangeMatch) {
+    return parseInt(rangeMatch[3]);
+  }
+
+  // Then try the timer emoji format
   const match = /⏲\s?(\d{1,2}):(\d{2})/.exec(line);
   return match ? parseInt(match[1]) : 0;
 }
@@ -143,6 +186,13 @@ export function extractEventEndHourFromLine(line: string): number {
  * @returns The end minute or 0 if not found
  */
 export function extractEventEndMinFromLine(line: string): number {
+  // First check for the time range format (HH:MM-HH:MM)
+  const rangeMatch = /(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/.exec(line);
+  if (rangeMatch) {
+    return parseInt(rangeMatch[4]);
+  }
+
+  // Then try the timer emoji format
   const match = /⏲\s?(\d{1,2}):(\d{2})/.exec(line);
   return match ? parseInt(match[2]) : 0;
 }

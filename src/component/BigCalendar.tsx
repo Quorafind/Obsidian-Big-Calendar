@@ -4,29 +4,26 @@ import {Notice} from 'obsidian';
 import CalendarComponent, {EventRefActions} from '@/component/Calendar/Calendar';
 import {View, SlotInfo} from 'react-big-calendar';
 import {showEventInDailyNotes} from '@/obComponents/showEvent';
-import {useEvents} from '@/hooks/useStore';
+import {useApp, useEvents} from '@/hooks/useStore';
 import useCalendarStore from '@/stores/calendarStore';
 import {EventCreateResult} from '@/obComponents/EventCreatePrompt';
 
 interface Props {}
 
 const BigCalendar: React.FC<Props> = () => {
-  // Get events with memoization (already handled in the useEvents hook now)
-  const events = useEvents();
+  const app = useApp();
   const [isLoading, setIsLoading] = useState(true);
   const eventRef = useRef<EventRefActions>(null);
-  const eventsUpdated = useRef(false);
 
   // Get calendar state once and prevent re-renders
-  const calendarView = useCalendarStore((state) => state.calendarView);
-  const startDay = useCalendarStore((state) => state.startDay);
+  const {calendarView, startDay} = useCalendarStore();
 
   // Fetch data only once when component mounts
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
       try {
-        await Promise.all([eventService.fetchAllEvents(), fileService.getMyAllDailyNotes()]);
+        await Promise.all([eventService.fetchAllEvents(app), fileService.getMyAllDailyNotes()]);
 
         if (isMounted) {
           setIsLoading(false);
@@ -47,35 +44,6 @@ const BigCalendar: React.FC<Props> = () => {
       isMounted = false;
     };
   }, []);
-
-  // Update calendar events with a ref to avoid re-renders
-  // Only update events if they've changed and we haven't already processed them
-  useEffect(() => {
-    if (!eventRef.current || !events || events.length === 0) return;
-
-    if (!eventsUpdated.current) {
-      // Mark that we've updated events to avoid repeated updates
-      eventsUpdated.current = true;
-
-      // Use a delayed update to break circular dependencies
-      const timeoutId = setTimeout(() => {
-        if (eventRef.current) {
-          try {
-            eventRef.current.setEvents(events);
-          } catch (err) {
-            console.error('Error setting events:', err);
-          } finally {
-            // Reset the flag after a delay to allow future updates
-            setTimeout(() => {
-              eventsUpdated.current = false;
-            }, 500);
-          }
-        }
-      }, 50);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [events]);
 
   // Handle event double click
   const handleEventDoubleClick = useCallback(async (event: any) => {

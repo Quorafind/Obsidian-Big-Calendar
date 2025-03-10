@@ -5,7 +5,6 @@ import {App, moment} from 'obsidian';
 // Define the Calendar state interface
 export interface CalendarState {
   // State properties
-  events: Model.Event[];
   calendarView: View;
   calendarDate: Date;
   selectable: boolean;
@@ -15,7 +14,6 @@ export interface CalendarState {
   isLoading: boolean;
 
   // Actions
-  setEvents: (events: Model.Event[]) => void;
   setCalendarView: (view: View) => void;
   setCalendarDate: (date: Date) => void;
   setSelectable: (selectable: boolean) => void;
@@ -23,7 +21,6 @@ export interface CalendarState {
   setCalendarPopup: (popup: boolean) => void;
   setStartDay: (startDay: 'sunday' | 'monday') => void;
   setLoading: (isLoading: boolean) => void;
-  updateEvent: (eventId: string, updates: Partial<Model.Event>) => void;
 
   // Storage-related actions
   saveCalendarView: (app: App) => void;
@@ -34,7 +31,6 @@ export interface CalendarState {
 // Create the store
 const useCalendarStore = create<CalendarState>((set, get) => ({
   // Initial state
-  events: [],
   calendarView: 'month',
   calendarDate: new Date(),
   selectable: true,
@@ -42,22 +38,6 @@ const useCalendarStore = create<CalendarState>((set, get) => ({
   calendarPopup: true,
   startDay: 'monday',
   isLoading: true,
-
-  // Actions
-  setEvents: (events) => {
-    // Check if the events array has actually changed
-    const currentEvents = get().events;
-
-    // Skip update if it's the same reference
-    if (events === currentEvents) {
-      return;
-    }
-
-    // Update only if there's a meaningful change
-    if (events.length !== currentEvents.length || JSON.stringify(events) !== JSON.stringify(currentEvents)) {
-      set({events});
-    }
-  },
 
   setCalendarView: (view) => {
     // Only update if the view has changed
@@ -114,28 +94,6 @@ const useCalendarStore = create<CalendarState>((set, get) => ({
     if (get().isLoading !== isLoading) {
       set({isLoading});
     }
-  },
-
-  updateEvent: (eventId, updates) => {
-    // Get current events
-    const events = get().events;
-
-    // Find the event to update
-    const eventIndex = events.findIndex((event) => event.id === eventId);
-
-    // If event not found, do nothing
-    if (eventIndex === -1) {
-      return;
-    }
-
-    // Create new array with updated event
-    const updatedEvents = [...events];
-    updatedEvents[eventIndex] = {
-      ...updatedEvents[eventIndex],
-      ...updates,
-    };
-
-    set({events: updatedEvents});
   },
 
   // Storage-related actions

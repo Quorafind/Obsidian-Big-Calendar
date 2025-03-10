@@ -54,12 +54,35 @@ export function createTimeRegex(): RegExp {
 }
 
 /**
+ * Creates a regex for matching time range formats
+ * Matches format: HH:MM-HH:MM
+ *
+ * @returns RegExp object for matching time ranges
+ */
+export function createTimeRangeRegex(): RegExp {
+  return /(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/;
+}
+
+/**
  * Extracts the hour component from a time notation
  *
  * @param line The line to extract from
  * @returns The hour as a number or undefined if not found
  */
 export function extractEventHour(line: string): number | undefined {
+  // First try to match time range format
+  const rangeMatch = createTimeRangeRegex().exec(line);
+  if (rangeMatch) {
+    return parseInt(rangeMatch[1]);
+  }
+
+  // Try to match standard time at the beginning
+  const standardMatch = /^-\s*(\d{1,2}):(\d{2})/.exec(line);
+  if (standardMatch) {
+    return parseInt(standardMatch[1]);
+  }
+
+  // If no match yet, try the timer emoji format
   const match = createTimeRegex().exec(line);
   return match ? parseInt(match[1]) : undefined;
 }
@@ -71,6 +94,19 @@ export function extractEventHour(line: string): number | undefined {
  * @returns The minute as a number or undefined if not found
  */
 export function extractEventMinute(line: string): number | undefined {
+  // First try to match time range format
+  const rangeMatch = createTimeRangeRegex().exec(line);
+  if (rangeMatch) {
+    return parseInt(rangeMatch[2]);
+  }
+
+  // Try to match standard time at the beginning
+  const standardMatch = /^-\s*(\d{1,2}):(\d{2})/.exec(line);
+  if (standardMatch) {
+    return parseInt(standardMatch[2]);
+  }
+
+  // If no match yet, try the timer emoji format
   const match = createTimeRegex().exec(line);
   return match ? parseInt(match[2]) : undefined;
 }
