@@ -1,55 +1,73 @@
 # Obsidian Big Calendar
 
-A Calendar plugin to show more information like google calendar.
+A modern, feature-rich calendar plugin for Obsidian that integrates with your daily notes and tasks. Based on [React Big Calendar](https://github.com/jquense/react-big-calendar).
+
+![Big Calendar Screenshot](https://cdn.jsdelivr.net/gh/Quorafind/.github@main/IMAGE/big-calendar-screenshot.jpg)
 
 ## Features
 
-### All features in React Big Calendar
+- **Multiple Calendar Views**
 
-- [x] Month View (v1)
-- [x] Week View  (v1)
-- [x] Day View (v1)
-- [x] Agenda View  (v1)
+  - Month View
+  - Week View
+  - Day View
+  - Agenda View
 
-and so on.. You could find details in [React Big Calendar](https://github.com/jquense/react-big-calendar)
+- **Seamless Obsidian Integration**
 
-### Work with Obsidian
+  - Automatically detects and displays tasks with time information
+  - Parses time blocks from daily notes
+  - Click on events to jump to the original note
+  - Real-time updates when files are created, modified, or deleted
 
-- Show tasks marked with time and day  (v1)
-- Show blocks marked with time in daily note  (v1)
-- Click tasks/blocks to jump to the original note (v1)
-
-## Problems NOW
-
-- [x] Cannot parse when there are excalidraw or folder note md files in Daily Note Folder.
-- [x] Should restart again to make the calendar parse.
-- [x] Adding tasks and Should restart it to parse.
+- **Customization Options**
+  - Choose first day of the week (Sunday or Monday)
+  - Configure where to insert and process events in your notes
+  - Customize event display format
 
 ## Usage
 
-Allow:
+### Time Formats
 
-- `- [ ]` in daily note.
-- `- 19:00` in daily note.
-- `- [ ] 19:00` in daily note.
+The plugin recognizes the following formats in your daily notes:
 
-## Install
+- Tasks with time: `- [ ] 19:00 Meeting with team`
+- Time blocks: `- 19:00 Dinner with family`
+- Checkbox with time: `- [ ] 19:00 Review project proposal`
 
-### Plugin Market
+### Configuration
 
-Not yet
+1. **First Day of Week**: Choose between Sunday (default) or Monday
+2. **Insert after heading**: Specify where new events should be inserted in your notes
+3. **Process Events below**: Only entries below this string/section will be processed
 
-### BRAT
+## Installation
 
-Add `Quorafind/Obsidian-Big-Calendar` to BRAT.
+### Community Plugins
 
-### Manual Install
+1. Open Obsidian Settings
+2. Go to Community Plugins
+3. Search for "Big Calendar"
+4. Click Install, then Enable
 
-Download the latest release. Extract and put the three files (main.js, manifest.json, styles.css) to folder `{{obsidian_vault}}/.obsidian/plugins/Obsidian-Big-Calendar`.
+### BRAT (Beta Reviewer's Auto-update Tool)
 
-# Say Thank You
+1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+2. Add `Quorafind/Obsidian-Big-Calendar` to BRAT
 
-If you are enjoying Big Calendar then please support my work and enthusiasm by buying me a coffee on [https://www.buymeacoffee.com/boninall](https://www.buymeacoffee.com/boninall).
+### Manual Installation
+
+1. Download the latest release from [GitHub](https://github.com/Quorafind/Obsidian-Big-Calendar/releases)
+2. Extract the files (main.js, manifest.json, styles.css) to your vault's plugins folder: `{{obsidian_vault}}/.obsidian/plugins/Obsidian-Big-Calendar`
+3. Reload Obsidian
+4. Enable the plugin in Obsidian settings
+
+## Support Development
+
+If you find Big Calendar useful, consider supporting its development:
 
 <a href="https://www.buymeacoffee.com/boninall"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=boninall&button_colour=6495ED&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00"></a>
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -43,7 +43,7 @@ export class BigCalendarSettingTab extends PluginSettingTab {
     const {containerEl} = this;
     this.containerEl.empty();
 
-    this.containerEl.createEl('h1', {text: t('Regular Options')});
+    new Setting(containerEl).setHeading().setName(t('Regular Options'));
 
     new Setting(containerEl)
       .setName(t('First Day of Week'))
@@ -91,26 +91,7 @@ export class BigCalendarSettingTab extends PluginSettingTab {
           }),
       );
 
-    this.containerEl.createEl('h1', {text: t('Experimental Options')});
-
-    new Setting(containerEl)
-      .setName(t('Default Event Composition'))
-      .setDesc(
-        t(
-          'Set default event composition, you should use {TIME} as "HH:mm" and {CONTENT} as content. "{TIME} {CONTENT}" by default',
-        ),
-      )
-      .addText((text) =>
-        text
-          .setPlaceholder(DEFAULT_SETTINGS.DefaultEventComposition)
-          .setValue(this.plugin.settings.DefaultEventComposition)
-          .onChange(async (value) => {
-            this.plugin.settings.DefaultEventComposition = value;
-            this.applySettingsUpdate();
-          }),
-      );
-
-    this.containerEl.createEl('h1', {text: t('Say Thank You')});
+    new Setting(containerEl).setHeading().setName(t('Say Thank You'));
 
     new Setting(containerEl)
       .setName(t('Donate'))
