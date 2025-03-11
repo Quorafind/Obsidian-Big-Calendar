@@ -89,9 +89,9 @@ export async function getEventsFromDailyNote(
       // Parse the line
       const parsedLine = parseLine(line);
 
-      // Skip lines without time information
+      // Check if line has time information or is a task
       if (lineContainsTime(line)) {
-        // Convert to event
+        // Convert to event - tasks without time info will be treated as all-day events
         const event = convertToEvent(parsedLine, startDate, currentIndex, dailyNote.path);
 
         if (event) {
@@ -133,8 +133,6 @@ export async function getEvents(app: App): Promise<Model.Event[]> {
         await getEventsFromDailyNote(dailyNotes[key], events);
       }
     }
-
-    console.log(events);
 
     return events;
   }, 'Failed to get events');

@@ -25,4 +25,8 @@ export default {
   'Close big calendar successfully': '成功关闭大日历',
   'Your daily notes folder is not set correctly. Please check your settings.':
     '你的日记笔记文件夹设置不正确。请检查你的设置。',
+  'Select a date': '选择一个日期',
+  Today: '今天',
+  Cancel: '取消',
+  'Go to date': '跳转到日期',
 };

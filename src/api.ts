@@ -28,6 +28,7 @@ export const updateEvent = async (
   eventStartDate: any,
   eventEndDate: any,
   originalEndDate: Date,
+  originalPath: string,
 ) => {
   return await eventService.updateEventInFile(
     eventId,
@@ -36,6 +37,7 @@ export const updateEvent = async (
     eventStartDate,
     eventEndDate,
     originalEndDate,
+    originalPath,
   );
 };
 
@@ -48,8 +50,8 @@ export const parseEvent = (line: string) => {
 };
 
 // File-related functions
-export const getFile = (eventId: string) => {
-  return fileService.getFile(eventId);
+export const getFile = (event: Model.Event) => {
+  return fileService.getFile(event);
 };
 
 export const getDailyNotePath = (): string => {

@@ -1,0 +1,80 @@
+/* Time Selector Modal Styles */
+.date-picker-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 280px;
+}
+
+.date-picker-title {
+  margin: 0 0 10px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: var(--text-normal);
+}
+
+.current-date-display {
+  text-align: center;
+  font-size: 1.2em;
+  margin: 5px 0 10px 0;
+  font-weight: bold;
+  color: var(--text-accent);
+  border-radius: 4px;
+  padding: 6px;
+  background-color: var(--background-secondary-alt);
+}
+
+.date-input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  margin-top: 8px;
+  font-family: var(--font-interface);
+  box-sizing: border-box;
+}
+
+.date-input:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+.today-button {
+  margin-top: 10px;
+  background-color: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.today-button:hover {
+  background-color: var(--interactive-hover);
+}
+
+.buttons-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+/* 点击日期标签时的提示样式 */
+.rbc-toolbar-label {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  justify-content: center;
+}

@@ -122,7 +122,7 @@ class EventService {
    * @param endDate New end date
    * @returns Updated event or null
    */
-  public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate) {
+  public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate, newTitle?: string) {
     try {
       if (startDate && endDate && event.id && event.title) {
         // 记录原始ID以便跟踪
@@ -131,12 +131,13 @@ class EventService {
         // 先执行changeEvent，让文件更新完成
         const updatedEvent = await changeEvent(
           event.id,
-          event.originalContent || '',
-          event.title,
-          event.eventType || '',
+          event.originalContent || event.title,
+          newTitle || event.title,
+          event.eventType || 'default',
           startDate,
           endDate,
           new Date(event.end),
+          event.path,
         );
 
         // 检查updatedEvent.id与原始event.id是否相同
@@ -443,6 +444,7 @@ class EventService {
     eventStartDate: stringOrDate,
     eventEndDate: stringOrDate,
     originalEndDate: Date,
+    originalPath: string,
   ): Promise<Model.Event> {
     return await changeEvent(
       eventId,
@@ -452,6 +454,7 @@ class EventService {
       eventStartDate,
       eventEndDate,
       originalEndDate,
+      originalPath,
     );
   }
 

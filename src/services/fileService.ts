@@ -1,5 +1,5 @@
 import useFileStore from '@/stores/fileStore';
-import {getAllDailyNotes, getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
+import {createDailyNote, getAllDailyNotes, getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
 import {App, TFile} from 'obsidian';
 
 class FileService {
@@ -32,6 +32,14 @@ class FileService {
    */
   public async getMyAllDailyNotes() {
     return this.getAllFiles();
+  }
+
+  public async createDailyNote(date: moment.Moment): Promise<TFile> {
+    const app = this.getState().app;
+    if (!app) throw new Error('App not initialized');
+
+    const dailyNote = await createDailyNote(date);
+    return dailyNote;
   }
 
   public async getDailyNoteByEvent(date: moment.Moment): Promise<TFile> {
