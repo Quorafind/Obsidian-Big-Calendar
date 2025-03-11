@@ -3,8 +3,8 @@
 export default {
   // setting.ts
   welcome: 'Welcome to the Big Calendar',
-  'Open Big Calendar Successfully': 'Open Big Calendar Successfully',
-  'Open Big Calendar': 'Open Big Calendar',
+  'Open big calendar successfully': 'Open big calendar successfully',
+  'Open big calendar': 'Open big calendar',
   Sunday: 'Sunday',
   Monday: 'Monday',
   'Regular Options': 'Regular Options',

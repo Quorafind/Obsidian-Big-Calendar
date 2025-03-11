@@ -25,14 +25,14 @@ export default class BigCalendarPlugin extends Plugin {
 
     // Add ribbon icon
     this.addRibbonIcon('changeTaskStatus', 'Big Calendar', () => {
-      new Notice(t('Open Big Calendar Successfully'));
+      new Notice(t('Open big calendar successfully'));
       this.openCalendar();
     });
 
     // Add command
     this.addCommand({
       id: 'open-big-calendar',
-      name: t('Open Big Calendar'),
+      name: t('Open big calendar'),
       callback: () => this.openCalendar(),
       hotkeys: [],
     });

@@ -1,8 +1,8 @@
 export default {
   // setting.ts
   welcome: '欢迎使用大日历',
-  'Open Big Calendar Successfully': '成功打开大日历',
-  'Open Big Calendar': '打开大日历',
+  'Open big calendar successfully': '成功打开大日历',
+  'Open big calendar': '打开大日历',
   Sunday: '星期日',
   Monday: '星期一',
   'Regular Options': '常规选项',
