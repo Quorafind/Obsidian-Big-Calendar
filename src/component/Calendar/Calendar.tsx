@@ -1,4 +1,4 @@
-import React, {forwardRef, useCallback, useEffect, useMemo, memo} from 'react';
+import React, {forwardRef, useCallback, useEffect, useMemo, memo, useState} from 'react';
 import '@/less/Calendar.less';
 import '@/less/time-select.less';
 import '@/less/event-styles.less';
@@ -13,10 +13,15 @@ import useCalendarStore from '@/stores/calendarStore';
 import EventCreatePrompt, {EventCreateResult} from '@/obComponents/EventCreatePrompt';
 import {useEvents} from '@/hooks/useStore';
 import useEventStore from '@/stores/eventStore';
+import locationService from '@/services/locationService';
 // Import our custom toolbar
 import CustomToolbar from './CustomToolbar';
 // Import our custom event component
 import EventComponent from './EventComponent';
+// Import our filter component
+import FilterComponent from './FilterComponent';
+import {useView} from '@/hooks/useView';
+import {t} from '@/translations/helper';
 
 export interface EventRefActions {
   updateEvents: (events: Model.Event[]) => void;
@@ -47,11 +52,14 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
     onEventSelect: handleEventSelectCallback,
   } = props;
 
+  // State to manage loading state when filters change
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   // Get app from fileStore
   const app = useFileStore((state) => state.app);
 
   const events = useEvents();
-  const updateEvent = useEventStore((state) => state.updateEvent);
   // Get state and actions from the calendar store
   const {
     calendarView,
@@ -73,6 +81,40 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
 
   // Create a memoized localizer
   const localizer = useMemo(() => momentLocalizer(moment), []);
+
+  // Load events when the component mounts or when the app changes
+  useEffect(() => {
+    const fetchEvents = async () => {
+      if (app) {
+        setIsLoading(true);
+        try {
+          // Fetch all events
+          await eventService.fetchAllEvents(app);
+
+          // Apply current filters after loading events
+          const query = locationService.getState().query;
+          if (query) {
+            const filterCriteria: Model.EventFilter = {
+              eventType: query.eventType || undefined,
+              contentRegex: query.contentRegex || undefined,
+              folderPaths: query.folderPaths?.length > 0 ? query.folderPaths : undefined,
+              // Add any other filter criteria from query
+              contentText: query.text || '',
+            };
+
+            // Apply filtering
+            eventService.filterEvents(filterCriteria);
+          }
+        } catch (error) {
+          console.error('Error loading events:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchEvents();
+  }, [app]);
 
   // Initialize the component - Only run once when app is available
   useEffect(() => {
@@ -127,6 +169,53 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
     setStartDay,
     setLoading,
   ]);
+
+  // Handle filter changes - reload events only if metadata filters change
+  const handleFilterChange = useCallback(
+    async (filterType: 'metadata' | 'client') => {
+      if (!app) return;
+
+      // Only reload data from files if metadata filters have changed
+      if (filterType === 'metadata') {
+        setIsRefreshing(true);
+        try {
+          await eventService.fetchAllEvents(app);
+
+          // After fetching all events, apply filters
+          const query = locationService.getState().query;
+          const filterCriteria: Model.EventFilter = {
+            eventType: query.eventType || undefined,
+            contentRegex: query.contentRegex || undefined,
+            folderPaths: query.folderPaths?.length > 0 ? query.folderPaths : undefined,
+            contentText: query.text || '',
+          };
+
+          // Apply filtering
+          eventService.filterEvents(filterCriteria);
+        } catch (error) {
+          console.error('Error refreshing events:', error);
+        } finally {
+          setIsRefreshing(false);
+        }
+      } else {
+        // For client-side filtering, just apply filters to existing events
+        const query = locationService.getState().query;
+        const filterCriteria: Model.EventFilter = {
+          eventType: query.eventType || undefined,
+          contentRegex: query.contentRegex || undefined,
+          folderPaths: query.folderPaths?.length > 0 ? query.folderPaths : undefined,
+          contentText: query.text || '',
+        };
+
+        // Apply filtering
+        eventService.filterEvents(filterCriteria);
+
+        // Trigger re-render
+        useEventStore.getState().setForceUpdate();
+      }
+    },
+    [app],
+  );
 
   // Style events based on their type
   const styleEvents = useCallback((event: any) => {
@@ -199,10 +288,6 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
   const onEventResize = useCallback<withDragAndDropProps['onEventResize']>((data) => {
     const {event, start, end} = data;
 
-    // 移除本地更新逻辑，统一由 editEvent 处理
-    // 这样可以确保状态更新和文件更新同步
-
-    // 直接调用 editEvent，移除 setTimeout
     eventService
       .editEvent(event as Model.Event, start, end)
       .then((updatedEvent) => {
@@ -221,10 +306,6 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
   const onEventDrop = useCallback<withDragAndDropProps['onEventDrop']>((data) => {
     const {event, start, end} = data;
 
-    // 移除本地更新，让状态更新统一由 editEvent 处理
-    // 这样可以避免状态更新和文件更新不同步
-
-    // 直接调用 editEvent，移除 setTimeout
     eventService
       .editEvent(event as Model.Event, start, end)
       .then((updatedEvent) => {
@@ -294,7 +375,17 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
     handleEventSelect,
   ]);
 
-  return <DragAndDropCalendar {...calendarProps} />;
+  return (
+    <div className="calendar-container">
+      <div className="calendar-filters">
+        <FilterComponent onFilterChange={handleFilterChange} />
+        {(isRefreshing || isLoading) && (
+          <div className="filter-refreshing">{isLoading ? 'Loading events...' : 'Refreshing events...'}</div>
+        )}
+      </div>
+      <DragAndDropCalendar {...calendarProps} />
+    </div>
+  );
 });
 
 export default memo(CalendarComponent);

@@ -1,4 +1,4 @@
-import {WorkspaceLeaf, ItemView, TFile} from 'obsidian';
+import {WorkspaceLeaf, ItemView, TFile, setIcon} from 'obsidian';
 import {CALENDAR_VIEW_TYPE} from './constants';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -7,6 +7,8 @@ import App from './App';
 import type BigCalendarPlugin from './index';
 import {fileService, eventService} from '@/services';
 import {getDateFromFile} from 'obsidian-daily-notes-interface';
+import {ViewProvider} from '@/hooks/useView';
+import {t} from '@/translations/helper';
 
 export class BigCalendar extends ItemView {
   plugin: BigCalendarPlugin;
@@ -60,11 +62,6 @@ export class BigCalendar extends ItemView {
     }
   }
 
-  //   private onCalendarClose() {
-  //     storage.remove(['currentDate']);
-  //     // Nothing to clean up.
-  //   }
-
   async onOpen(): Promise<void> {
     this.onFileCreated = this.onFileCreated.bind(this);
     this.onFileDeleted = this.onFileDeleted.bind(this);
@@ -74,10 +71,17 @@ export class BigCalendar extends ItemView {
     this.registerEvent(this.app.vault.on('delete', this.onFileDeleted));
     this.registerEvent(this.app.vault.on('modify', this.onFileModified));
 
+    const actionElement = this.addAction('filter', t('Filter'), () => {
+      setIcon(actionElement, !this.contentEl.hasClass('filter-open') ? 'filter' : 'filter-x');
+      this.contentEl.toggleClass('filter-open', !this.contentEl.hasClass('filter-open'));
+    });
+
     this.root = ReactDOM.createRoot(this.contentEl);
     this.root.render(
       <React.StrictMode>
-        <App />
+        <ViewProvider initialView={this}>
+          <App />
+        </ViewProvider>
       </React.StrictMode>,
     );
   }
