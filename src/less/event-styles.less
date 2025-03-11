@@ -1,0 +1,72 @@
+/* Custom Event Styles */
+
+/* Base event style */
+.rbc-event {
+  border-radius: 4px;
+  padding: 2px;
+  font-size: 0.85em;
+  background-color: var(--interactive-accent);
+  border: 1px solid var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+}
+
+/* Style for different event types */
+.event-type-marker {
+  margin-right: 4px;
+  font-size: 1em;
+  height: var(--size-4-4);
+}
+
+/* Time display for events */
+.event-time {
+  font-size: 0.8em;
+  margin-left: 4px;
+  opacity: 0.8;
+  font-weight: normal;
+
+  position: absolute;
+  right: 0;
+
+  bottom: 0;
+
+  pointer-events: none;
+}
+
+/* Event title */
+.event-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Selected event highlight */
+.rbc-selected {
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* Adjust for event continuations */
+.rbc-event-continues-after {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.rbc-event-continues-prior {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* For smaller events in day/week view */
+.rbc-time-view .rbc-event {
+  min-height: 20px;
+}
+
+/* For month view events */
+.rbc-month-view .rbc-event {
+  margin: 1px 0;
+}
+
+/* Hover effect */
+.rbc-event:hover {
+  filter: brightness(1.1);
+}

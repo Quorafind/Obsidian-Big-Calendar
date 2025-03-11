@@ -1,5 +1,8 @@
 import React, {forwardRef, useCallback, useEffect, useMemo, memo} from 'react';
 import '@/less/Calendar.less';
+import '@/less/time-select.less';
+import '@/less/event-styles.less';
+import '@/less/modal.less';
 import {Calendar, Event, momentLocalizer, SlotInfo, View} from 'react-big-calendar';
 import {moment} from 'obsidian';
 import withDragAndDrop, {withDragAndDropProps} from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -10,7 +13,10 @@ import useCalendarStore from '@/stores/calendarStore';
 import EventCreatePrompt, {EventCreateResult} from '@/obComponents/EventCreatePrompt';
 import {useEvents} from '@/hooks/useStore';
 import useEventStore from '@/stores/eventStore';
-import {updateEvent} from '@/api';
+// Import our custom toolbar
+import CustomToolbar from './CustomToolbar';
+// Import our custom event component
+import EventComponent from './EventComponent';
 
 export interface EventRefActions {
   updateEvents: (events: Model.Event[]) => void;
@@ -244,7 +250,6 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       defaultDate: calendarDate,
       date: calendarDate,
       view: calendarView,
-      style: {height: '90vh'},
       eventPropGetter: styleEvents,
       popup: calendarPopup,
       onEventDrop: onEventDrop,
@@ -252,17 +257,25 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       titleAccessor: (event: any) => {
         // Remove time patterns from the title for display
         const title = event.title as string;
-        return title
+        const cleanedTitle = title
           .replace(/\d{1,2}:\d{2}(-\d{1,2}:\d{2})?/g, '') // Remove time ranges like 10:00-11:00
           .replace(/⏲\s?\d{1,2}:\d{2}/g, '') // Remove end time emoji patterns
           .replace(/📅\s?\d{4}-\d{2}-\d{2}/g, '') // Remove date patterns
           .trim();
+
+        // Return original title if cleaned version is empty
+        return cleanedTitle || title;
       },
       tooltipAccessor: (event: any) => event.title as string,
       onView: handleViewChange,
       onNavigate: handleNavigate,
       onDoubleClickEvent: handleDoubleClickEvent,
       onSelectSlot: handleEventSelect,
+      // Add custom components configuration
+      components: {
+        toolbar: CustomToolbar,
+        event: EventComponent,
+      },
     };
   }, [
     select,

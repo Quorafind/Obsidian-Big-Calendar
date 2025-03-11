@@ -426,13 +426,19 @@ export function lineContainsParseBelowToken(line: string, settings: BigCalendarS
 }
 
 /**
- * Checks if a line contains time information
+ * Checks if a line contains time information or is a task
  *
  * @param line The line to check
- * @returns Boolean indicating if the line contains time information
+ * @returns Boolean indicating if the line contains time information or is a task
  */
 export function lineContainsTime(line: string): boolean {
-  return PATTERNS.TIME_STANDARD.test(line) || PATTERNS.TIME_WITH_TAG.test(line) || PATTERNS.END_TIME.test(line);
+  // Check if line contains time information or is a task
+  return (
+    PATTERNS.TIME_STANDARD.test(line) ||
+    PATTERNS.TIME_WITH_TAG.test(line) ||
+    PATTERNS.END_TIME.test(line) ||
+    PATTERNS.TASK.test(line)
+  );
 }
 
 /**
@@ -449,46 +455,76 @@ export function convertToEvent(
   lineIndex: number,
   path: string,
 ): Model.Event | null {
-  // Skip lines without time information
-  if (!parsedLine.startTime) {
+  // Determine if it's a task
+  const isTask = parsedLine.isTask;
+
+  // Check if there's time information
+  let hasTimeInfo = parsedLine.startTime !== undefined;
+  const hasEndTimeOnly = !parsedLine.startTime && !!parsedLine.endTime;
+
+  // Handle case where only end time is provided (⏲)
+  if (hasEndTimeOnly && parsedLine.endTime) {
+    hasTimeInfo = true;
+  }
+
+  // Check if there's due date information
+  const hasDueDate = parsedLine.dates.some((d) => d.type === 'due');
+  const hasStartDate = parsedLine.dates.some((d) => d.type === 'start');
+
+  // If it's not a task and has no time information and no due date, skip it
+  if (!isTask && !hasTimeInfo && !hasDueDate) {
     return null;
   }
 
-  // Determine the start date
+  // Determine the start date and end date
   let startDate = defaultDate.clone();
   let endDate = defaultDate.clone();
+  let dueDate: moment.Moment | undefined;
 
-  // Check for due date or start date
+  // Extract dates if available
   for (const date of parsedLine.dates) {
     if (date.type === 'due') {
+      dueDate = date.moment.clone();
       endDate = date.moment.clone();
     } else if (date.type === 'start') {
       startDate = date.moment.clone();
     }
   }
 
-  // Set start time
-  startDate.hour(parsedLine.startTime.hour);
-  startDate.minute(parsedLine.startTime.minute);
-  startDate.second(parsedLine.startTime.second || 0);
+  // For tasks without time information but with due date, handle as all-day
+  let allDay = false;
 
-  // Set end time if available, otherwise default to start time + 30 min
-  if (parsedLine.endTime) {
-    endDate.hour(parsedLine.endTime.hour);
-    endDate.minute(parsedLine.endTime.minute);
-    endDate.second(parsedLine.endTime.second || 0);
-  } else {
-    // Default duration: 30 minutes
-    endDate = startDate.clone().add(30, 'minutes');
-  }
+  if (isTask && !hasTimeInfo) {
+    allDay = true;
 
-  // If due date was used, ensure it includes time
-  if (parsedLine.dates.some((d) => d.type === 'due')) {
-    if (!parsedLine.endTime) {
-      // If no end time was specified, keep the same time as start
-      endDate.hour(parsedLine.startTime.hour);
-      endDate.minute(parsedLine.startTime.minute);
-      endDate.second(parsedLine.startTime.second || 0);
+    // If task has due date but no start date, set startDate to dueDate
+    if (dueDate && !hasStartDate) {
+      startDate = dueDate.clone();
+    }
+  } else if (hasTimeInfo) {
+    // Set start time
+    startDate.hour(parsedLine.startTime!.hour);
+    startDate.minute(parsedLine.startTime!.minute);
+    startDate.second(parsedLine.startTime!.second || 0);
+
+    // Set end time if available, otherwise default to start time + 30 min
+    if (parsedLine.endTime) {
+      endDate.hour(parsedLine.endTime.hour);
+      endDate.minute(parsedLine.endTime.minute);
+      endDate.second(parsedLine.endTime.second || 0);
+    } else {
+      // Default duration: 30 minutes
+      endDate = startDate.clone().add(30, 'minutes');
+    }
+
+    // If due date was used, ensure it includes time
+    if (hasDueDate) {
+      if (!parsedLine.endTime) {
+        // If no end time was specified, keep the same time as start
+        endDate.hour(parsedLine.startTime!.hour);
+        endDate.minute(parsedLine.startTime!.minute);
+        endDate.second(parsedLine.startTime!.second || 0);
+      }
     }
   }
 
@@ -571,7 +607,7 @@ export function convertToEvent(
     title: parsedLine.content,
     start: startDate.toDate(),
     end: endDate.toDate(),
-    allDay: false,
+    allDay,
     eventType,
     path,
   };
@@ -586,4 +622,55 @@ export function convertToEvent(
   }
 
   return event;
+}
+
+/**
+ * Gets the original task mark character based on the event type
+ *
+ * @param event The event object
+ * @returns The mark character corresponding to the event type
+ */
+export function getMarkBasedOnEvent(eventType: string): string | null {
+  if (!eventType || !eventType.startsWith('TASK-')) {
+    return null;
+  }
+
+  const taskType = eventType.split('-')[1];
+
+  switch (taskType) {
+    case 'TODO':
+      return ' ';
+    case 'DONE':
+      return 'x';
+    case 'CANCELLED':
+      return '-';
+    case 'IN_PROGRESS':
+      return '/';
+    case 'IMPORTANT':
+      return '!';
+    case 'QUESTION':
+      return '?';
+    case 'REVIEW':
+      return '>';
+    case 'IDEA':
+      return 'i';
+    case 'PRO':
+      return '+';
+    case 'CON':
+      return '-';
+    case 'BRAINSTORMING':
+      return 'b';
+    case 'EXAMPLE':
+      return 'e';
+    case 'QUOTE':
+      return 'q';
+    case 'NOTE':
+      return 'n';
+    case 'WIN':
+      return 'w';
+    case 'LOSE':
+      return 'l';
+    default:
+      return ' ';
+  }
 }

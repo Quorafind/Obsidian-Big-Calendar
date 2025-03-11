@@ -28,4 +28,8 @@ export default {
   'Close big calendar successfully': 'Close big calendar successfully',
   'Your daily notes folder is not set correctly. Please check your settings.':
     'Your daily notes folder is not set correctly. Please check your settings.',
+  'Select a date': 'Select a date',
+  Today: 'Today',
+  Cancel: 'Cancel',
+  'Go to date': 'Go to date',
 };

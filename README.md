@@ -2,8 +2,6 @@
 
 A modern, feature-rich calendar plugin for Obsidian that integrates with your daily notes and tasks. Based on [React Big Calendar](https://github.com/jquense/react-big-calendar).
 
-![Big Calendar Screenshot](https://cdn.jsdelivr.net/gh/Quorafind/.github@main/IMAGE/big-calendar-screenshot.jpg)
-
 ## Features
 
 - **Multiple Calendar Views**
@@ -31,9 +29,9 @@ A modern, feature-rich calendar plugin for Obsidian that integrates with your da
 
 The plugin recognizes the following formats in your daily notes:
 
-- Tasks with time: `- [ ] 19:00 Meeting with team`
+- Tasks with time range or time: `- [ ] 15:00 Meeting with team` or `- [ ] 14:00-18:00 Meeting with team`
 - Time blocks: `- 19:00 Dinner with family`
-- Checkbox with time: `- [ ] 19:00 Review project proposal`
+- Tasks with no time: `- [ ] Review project proposal`
 
 ### Configuration
 
