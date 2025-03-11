@@ -458,7 +458,7 @@ function cleanEventContent(originalContent: string, content: string): string {
 /**
  * Formats an event line with the provided content and timestamps
  */
-function formatEventLine(
+export function formatEventLine(
   cleanContent: string,
   startMoment: moment.Moment,
   endMoment: moment.Moment,
@@ -476,29 +476,21 @@ function formatEventLine(
   // Remove block ID from content for processing
   let processedContent = blockId ? cleanContent.replace(blockIdMatch[0], '') : cleanContent;
 
-  let newLine = mark
-    ? `- [${mark}] ${timeHour}:${timeMinute} ${processedContent}`
-    : `- ${timeHour}:${timeMinute} ${processedContent}`;
+  // Check if the start and end dates are the same
+  const sameDay = startMoment.isSame(endMoment, 'day');
 
-  // Add end time if needed
-  if (endMoment.isAfter(startMoment)) {
-    // Check if the start and end dates are the same
-    const sameDay = startMoment.isSame(endMoment, 'day');
+  let newLine;
 
-    if (sameDay) {
-      // For same-day events, use a time range format (HH:MM-HH:MM)
-      newLine = mark
-        ? `- [${mark}] ${timeHour}:${timeMinute}-${endMoment.format('HH:mm')} ${processedContent}`
-        : `- ${timeHour}:${timeMinute}-${endMoment.format('HH:mm')} ${processedContent}`;
-    } else {
-      // For multi-day events, add the end date with calendar emoji
-      newLine = mark
-        ? `- [${mark}] ${timeHour}:${timeMinute} ${processedContent}`
-        : `- ${timeHour}:${timeMinute} ${processedContent}`;
-      newLine += ` 📅 ${endMoment.format('YYYY-MM-DD')}`;
-      // Add end time
-      newLine += ` ⏲ ${endMoment.format('HH:mm')}`;
-    }
+  if (sameDay) {
+    // For same-day events, use a time range format (HH:MM-HH:MM)
+    newLine = mark
+      ? `- [${mark}] ${timeHour}:${timeMinute}-${endMoment.format('HH:mm')} ${processedContent}`
+      : `- ${timeHour}:${timeMinute}-${endMoment.format('HH:mm')} ${processedContent}`;
+  } else {
+    // For multi-day events, use the format with start and end date emojis
+    newLine = mark
+      ? `- [${mark}] ${processedContent} 🛫 ${startMoment.format('YYYY-MM-DD')} 📅 ${endMoment.format('YYYY-MM-DD')}`
+      : `- ${processedContent} 🛫 ${startMoment.format('YYYY-MM-DD')} 📅 ${endMoment.format('YYYY-MM-DD')}`;
   }
 
   // Add block ID back at the end if it exists

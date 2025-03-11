@@ -4,6 +4,8 @@ import {stringOrDate} from 'react-big-calendar';
 import {getAllLinesFromFile, safeExecute} from '@/api';
 import fileService from '@/services/fileService';
 import {globalService} from '@/services';
+import {formatEventLine} from './updateEvent';
+import {convertToEvent, parseLine} from './parser';
 
 interface MContent {
   content: string;
@@ -39,115 +41,120 @@ export async function waitForInsert(
   return await safeExecute(async () => {
     const {vault} = fileService.getState().app;
     const settings = globalService.getState().pluginSetting;
-    let lineNum: number;
 
     // Format the date
     const startMoment = startDate instanceof Date ? moment(startDate) : moment(startDate as string);
-    const startTimeHour = startMoment.format('HH');
-    const startTimeMinute = startMoment.format('mm');
+    const endMoment = endDate instanceof Date ? moment(endDate) : moment(endDate as string);
 
-    // Format the content based on whether endDate exists and differs from startDate
-    let formattedContent = `- ${startTimeHour}:${startTimeMinute} ${EventContent}`;
+    // Check if the event spans multiple days
+    const isMultiDayEvent = endDate && !startMoment.isSame(endMoment, 'day');
 
-    // Check if endDate exists and is different from startDate
-    if (endDate) {
-      const endMoment = endDate instanceof Date ? moment(endDate) : moment(endDate as string);
+    // Format the content based on event type
+    const formattedContent = formatEventLine(
+      EventContent,
+      startMoment,
+      endMoment,
+      isMultiDayEvent ? 'TASK-TODO' : 'default',
+    );
 
-      // If end time is different from start time, use time range format
-      if (!endMoment.isSame(startMoment, 'minute')) {
-        const endTimeHour = endMoment.format('HH');
-        const endTimeMinute = endMoment.format('mm');
-        formattedContent = `- ${startTimeHour}:${startTimeMinute}-${endTimeHour}:${endTimeMinute} ${EventContent}`;
-      }
-    }
+    // Get or create the daily note and insert the event
+    const result = await insertEventIntoNote(startMoment, formattedContent, vault, settings.InsertAfter);
+    const parsedLine = parseLine(formattedContent);
 
-    // Get or create the daily note for this date
-    const dailyNotes = await getAllDailyNotes();
-    const existingFile = getDailyNote(startMoment, dailyNotes);
-
-    if (!existingFile) {
-      // Create a new daily note if it doesn't exist
-      const file = await createDailyNote(startMoment);
-      const fileContents = await vault.read(file);
-      const newFileContent = await insertAfterHandler(settings.InsertAfter, formattedContent, fileContents);
-      await vault.modify(file, newFileContent.content);
-
-      // Create and return the event object
-      const eventId = startMoment.format('YYYYMMDDHHmmss') + '1';
-      return {
-        id: eventId,
-        title: EventContent,
-        start: new Date(
-          startMoment.year(),
-          startMoment.month(),
-          startMoment.date(),
-          parseInt(startTimeHour),
-          parseInt(startTimeMinute),
-        ),
-        end: endDate
-          ? new Date(endDate as any)
-          : new Date(
-              startMoment.year(),
-              startMoment.month(),
-              startMoment.date(),
-              parseInt(startTimeHour) + 1,
-              parseInt(startTimeMinute),
-            ),
-        allDay: false,
-        eventType: 'default',
-        path: file.path,
-      };
-    } else {
-      // Use existing daily note
-      const fileContents = await vault.read(existingFile);
-      const fileLines = getAllLinesFromFile(fileContents);
-
-      // Find the line number for the new event
-      if (fileLines.length === 0) {
-        lineNum = 1;
-      } else {
-        // Count existing events to determine the line number
-        let eventCount = 0;
-        for (const line of fileLines) {
-          if (line.startsWith('- ')) {
-            eventCount++;
-          }
-        }
-        lineNum = eventCount + 1;
-      }
-
-      // Insert the event into the file
-      const newFileContent = await insertAfterHandler(settings.InsertAfter, formattedContent, fileContents);
-      await vault.modify(existingFile, newFileContent.content);
-
-      // Create and return the event object
-      const eventId = startMoment.format('YYYYMMDDHHmmss') + lineNum;
-      return {
-        id: eventId,
-        title: EventContent,
-        start: new Date(
-          startMoment.year(),
-          startMoment.month(),
-          startMoment.date(),
-          parseInt(startTimeHour),
-          parseInt(startTimeMinute),
-        ),
-        end: endDate
-          ? new Date(endDate as any)
-          : new Date(
-              startMoment.year(),
-              startMoment.month(),
-              startMoment.date(),
-              parseInt(startTimeHour) + 1,
-              parseInt(startTimeMinute),
-            ),
-        allDay: false,
-        eventType: 'default',
-        path: existingFile.path,
-      };
-    }
+    // Convert to event - tasks without time info will be treated as all-day events
+    const event = convertToEvent(parsedLine, startMoment, result.lineNum, result.file.path);
+    // Create and return the event object
+    return event;
   }, 'Failed to create event');
 }
+
+/**
+ * Inserts event into a daily note
+ */
+async function insertEventIntoNote(
+  startMoment: moment.Moment,
+  formattedContent: string,
+  vault: any,
+  insertAfterSetting: string,
+): Promise<{file: any; lineNum: number}> {
+  const dailyNotes = await getAllDailyNotes();
+  const existingFile = getDailyNote(startMoment, dailyNotes);
+
+  if (!existingFile) {
+    // Create a new daily note if it doesn't exist
+    const file = await createDailyNote(startMoment);
+    const fileContents = await vault.read(file);
+    const newFileContent = await insertAfterHandler(insertAfterSetting, formattedContent, fileContents);
+    await vault.modify(file, newFileContent.content);
+
+    return {file, lineNum: 1};
+  } else {
+    // Use existing daily note
+    const fileContents = await vault.read(existingFile);
+    const fileLines = getAllLinesFromFile(fileContents);
+
+    // Find the line number for the new event
+    let lineNum = 1;
+    if (fileLines.length > 0) {
+      // Count existing events to determine the line number
+      let eventCount = 0;
+      for (const line of fileLines) {
+        if (line.startsWith('- ')) {
+          eventCount++;
+        }
+      }
+      lineNum = eventCount + 1;
+    }
+
+    // Insert the event into the file
+    const newFileContent = await insertAfterHandler(insertAfterSetting, formattedContent, fileContents);
+    await vault.modify(existingFile, newFileContent.content);
+
+    return {file: existingFile, lineNum};
+  }
+}
+
+/**
+ * Creates an event object from the given parameters
+ */
+function createEventObject(
+  eventContent: string,
+  startMoment: moment.Moment,
+  endMoment: moment.Moment,
+  startTimeHour: string,
+  startTimeMinute: string,
+  endDate: stringOrDate,
+  isMultiDayEvent: boolean,
+  file: any,
+  lineNum: number,
+): Model.Event {
+  const eventId = startMoment.format('YYYYMMDDHHmmss') + lineNum;
+
+  return {
+    id: eventId,
+    title: eventContent,
+    start: new Date(
+      startMoment.year(),
+      startMoment.month(),
+      startMoment.date(),
+      parseInt(startTimeHour),
+      parseInt(startTimeMinute),
+    ),
+    end: endDate
+      ? new Date(endDate as any)
+      : new Date(
+          startMoment.year(),
+          startMoment.month(),
+          startMoment.date(),
+          parseInt(startTimeHour) + 1,
+          parseInt(startTimeMinute),
+        ),
+    allDay: isMultiDayEvent,
+    eventType: isMultiDayEvent ? 'TASK-TODO' : 'default',
+    path: file.path,
+  };
+}
+
 //credit to chhoumann, original code from: https://github.com/chhoumann/quickadd
 export async function insertAfterHandler(
   targetString: string,

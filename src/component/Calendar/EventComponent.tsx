@@ -100,21 +100,6 @@ const EventComponent: React.FC<EventProps<Event>> = ({
         });
     });
 
-    // Add Delete option
-    menu.addItem((item) => {
-      item
-        .setTitle('Delete event')
-        .setIcon('trash')
-        .onClick(async () => {
-          try {
-            await eventService.hideEventById(event.id);
-            console.log('Event deleted successfully');
-          } catch (error) {
-            console.error('Error deleting event:', error);
-          }
-        });
-    });
-
     // Add Duplicate option
     menu.addItem((item) => {
       item
@@ -150,6 +135,7 @@ const EventComponent: React.FC<EventProps<Event>> = ({
         item
           .setTitle(`Set type: ${typeOption.name}`)
           .setChecked(isCurrentType)
+          .setIcon(typeOption.type === 'default' ? 'pencil' : 'check')
           .onClick(async () => {
             if (isCurrentType) return; // No need to update if it's already the current type
 
@@ -171,6 +157,25 @@ const EventComponent: React.FC<EventProps<Event>> = ({
             }
           });
       });
+    });
+
+    menu.addSeparator();
+
+    // Add Delete option
+    menu.addItem((item) => {
+      item
+        // @ts-expect-error internal method
+        .setWarning(true)
+        .setTitle('Delete event')
+        .setIcon('trash')
+        .onClick(async () => {
+          try {
+            await eventService.deleteEventById(event.id);
+            console.log('Event deleted successfully');
+          } catch (error) {
+            console.error('Error deleting event:', error);
+          }
+        });
     });
 
     // Show the menu at the mouse position
@@ -238,7 +243,13 @@ const EventComponent: React.FC<EventProps<Event>> = ({
       {/* Type marker */}
       {!isDefaultType && (
         <span className="event-type-marker">
-          <input data-task={mark} readOnly checked type="checkbox" className="task-list-item-checkbox"></input>
+          <input
+            data-task={mark}
+            readOnly
+            checked={event.eventType !== 'TASK-TODO'}
+            type="checkbox"
+            className="task-list-item-checkbox"
+          ></input>
         </span>
       )}
 
