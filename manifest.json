@@ -2,7 +2,7 @@
 	"id": "big-calendar",
 	"name": "Big Calendar",
 	"description": "Supports drag and drop, resizing, and more for events in Obsidian",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"author": "Boninall",
 	"authorUrl": "https://github.com/Quorafind/",
 	"isDesktopOnly": false,
