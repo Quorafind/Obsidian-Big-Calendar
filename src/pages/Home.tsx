@@ -8,8 +8,8 @@ function Home() {
 
   // Memoize the content based only on pathname changes
   const content = useMemo(() => {
-    return homeRouterSwitch(location.pathname);
-  }, [location.pathname]);
+    return homeRouterSwitch(location.hash);
+  }, [location.hash]);
 
   return (
     <>

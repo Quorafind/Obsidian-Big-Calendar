@@ -1,6 +1,6 @@
 {
   "name": "obsidian-big-calendar",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Supports drag and drop, resizing, and more for events in Obsidian",
   "author": "boninall",
   "main": "main.js",

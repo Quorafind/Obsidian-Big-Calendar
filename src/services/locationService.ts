@@ -1,46 +1,9 @@
 // import utils from "../helpers/utils";
 import useLocationStore from '@/stores/locationStore';
+import {globalService} from '@/services';
 
 class LocationService {
-  constructor() {
-    this.updateStateWithLocation();
-    window.onpopstate = () => {
-      this.updateStateWithLocation();
-    };
-  }
-
-  public updateStateWithLocation = () => {
-    const {pathname, search, hash} = window.location;
-    const urlParams = new URLSearchParams(search);
-    const state: AppLocation = {
-      pathname: '/',
-      hash: '',
-      query: {
-        tag: '',
-        duration: null,
-        text: '',
-        type: '',
-        filter: '',
-      },
-    };
-    state.query.tag = urlParams.get('tag') ?? '';
-    state.query.type = (urlParams.get('type') ?? '') as EventSpecType;
-    state.query.text = urlParams.get('text') ?? '';
-    state.query.filter = urlParams.get('filter') ?? '';
-    const from = parseInt(urlParams.get('from') ?? '0');
-    const to = parseInt(urlParams.get('to') ?? '0');
-    if (to > from && to !== 0) {
-      state.query.duration = {
-        from,
-        to,
-      };
-    }
-    state.hash = hash;
-
-    state.pathname = this.getValidPathname(pathname);
-
-    useLocationStore.getState().setLocation(state);
-  };
+  constructor() {}
 
   public getState = () => {
     return useLocationStore.getState();
@@ -51,121 +14,94 @@ class LocationService {
       tag: '',
       duration: null,
       text: '',
-      type: '',
+      eventType: '',
       filter: '',
+      contentRegex: '',
+      folderPaths: [],
+      metadataKeys: [],
+      metadataValues: {},
     });
-    this.updateLocationUrl();
   };
 
   public setQuery = (query: Query) => {
     useLocationStore.getState().setQuery(query);
-    this.updateLocationUrl();
   };
 
   public setHash = (hash: string) => {
     useLocationStore.getState().setHash(hash);
-    this.updateLocationUrl();
   };
 
-  public setPathname = (pathname: AppRouter) => {
-    useLocationStore.getState().setPathname(pathname);
-    this.updateLocationUrl();
-  };
-
-  public pushHistory = (pathname: string) => {
-    const locationState = this.getState();
-    let queryString = this.transformObjectToParamsString(locationState.query);
-    if (queryString) {
-      queryString = '?' + queryString;
-    }
-
-    window.history.pushState(null, '', pathname + locationState.hash + queryString);
-    this.updateStateWithLocation();
-  };
-
-  public replaceHistory = (pathname: string) => {
-    const locationState = this.getState();
-    let queryString = this.transformObjectToParamsString(locationState.query);
-    if (queryString) {
-      queryString = '?' + queryString;
-    }
-
-    window.history.replaceState(null, '', pathname + locationState.hash + queryString);
-    this.updateStateWithLocation();
-  };
-
-  public setEventTypeQuery = (type: EventSpecType | '' = '') => {
-    useLocationStore.getState().setType(type);
-    this.updateLocationUrl();
+  public setEventTypeQuery = (eventType: EventSpecType | '' = '') => {
+    useLocationStore.getState().setEventType(eventType);
   };
 
   public setEventFilter = (filterId: string) => {
     useLocationStore.getState().setQueryFilter(filterId);
-    this.updateLocationUrl();
+    // Apply filter settings from the selected workspace filter
+    this.applyWorkspaceFilter(filterId);
   };
 
   public setTextQuery = (text: string) => {
     useLocationStore.getState().setText(text);
-    this.updateLocationUrl();
   };
 
   public setTagQuery = (tag: string) => {
     useLocationStore.getState().setTagQuery(tag);
-    this.updateLocationUrl();
   };
 
   public setFromAndToQuery = (from: number, to: number) => {
     const duration = from && to ? {from, to} : null;
     useLocationStore.getState().setDurationQuery(duration);
-    this.updateLocationUrl();
   };
 
-  public getValidPathname = (pathname: string): AppRouter => {
-    if (
-      pathname === '/' ||
-      pathname === '/explore' ||
-      pathname === '/manage' ||
-      pathname === '/event' ||
-      pathname === '/setting'
-    ) {
-      return pathname as AppRouter;
-    }
-    return '/';
+  // New filter methods
+  public setContentRegex = (contentRegex: string) => {
+    useLocationStore.getState().setContentRegex(contentRegex);
   };
 
-  private updateLocationUrl = (method: 'replace' | 'push' = 'replace') => {
-    const {query, pathname, hash} = this.getState();
-    let queryString = this.transformObjectToParamsString(query);
-    if (queryString) {
-      queryString = '?' + queryString;
+  public setFolderPaths = (folderPaths: string[]) => {
+    useLocationStore.getState().setFolderPaths(folderPaths);
+  };
+
+  public setMetadataKeys = (metadataKeys: string[]) => {
+    useLocationStore.getState().setMetadataKeys(metadataKeys);
+  };
+
+  public setMetadataValues = (metadataValues: Record<string, string>) => {
+    useLocationStore.getState().setMetadataValues(metadataValues);
+  };
+
+  // Apply a workspace filter by ID
+  private applyWorkspaceFilter = (filterId: string) => {
+    const settings = globalService.getState().pluginSetting;
+    const filter = settings.WorkspaceFilters.find((f) => f.id === filterId && f.isEnabled);
+
+    if (!filter) {
+      return;
     }
 
-    if (method === 'replace') {
-      window.history.replaceState(null, '', pathname + hash + queryString);
+    // Apply the filter settings to the query
+    const locationStore = useLocationStore.getState();
+
+    // Apply event type filter
+    if (filter.eventTypes.length > 0) {
+      locationStore.setEventType((filter.eventTypes[0] as EventSpecType) || '');
     } else {
-      window.history.pushState(null, '', pathname + hash + queryString);
+      // Clear event type if none in the filter
+      locationStore.setEventType('');
     }
-  };
 
-  private transformObjectToParamsString = (query: Query): string => {
-    const params = new URLSearchParams();
-    if (query.tag) {
-      params.set('tag', query.tag);
-    }
-    if (query.type) {
-      params.set('type', query.type);
-    }
-    if (query.text) {
-      params.set('text', query.text);
-    }
-    if (query.filter) {
-      params.set('filter', query.filter);
-    }
-    if (query.duration) {
-      params.set('from', query.duration.from.toString());
-      params.set('to', query.duration.to.toString());
-    }
-    return params.toString();
+    // Set content regex
+    locationStore.setContentRegex(filter.contentRegex || '');
+
+    // Set folder paths
+    locationStore.setFolderPaths(filter.folderPaths || []);
+
+    // Set metadata keys
+    locationStore.setMetadataKeys(filter.metadataKeys || []);
+
+    // Set metadata values
+    locationStore.setMetadataValues(filter.metadataValues || {});
   };
 }
 

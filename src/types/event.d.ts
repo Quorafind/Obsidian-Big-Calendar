@@ -1,1 +1,22 @@
-type EventSpecType = 'NOT_TAGGED' | 'LINKED' | 'IMAGED' | 'CONNECTED';
+type EventSpecType =
+  | 'default'
+  | 'TASK-TODO'
+  | 'TASK-DONE'
+  | 'TASK-CANCELLED'
+  | 'TASK-FORWARDED'
+  | 'TASK-DEFERRED'
+  | 'TASK-IN_PROGRESS'
+  | 'TASK-QUESTION'
+  | 'TASK-ADD'
+  | 'TASK-REVIEWED'
+  | 'TASK-IMPORTANT'
+  | 'TASK-INFO'
+  | 'TASK-BOOKMARK'
+  | 'TASK-PRO'
+  | 'TASK-CON'
+  | 'TASK-BRAINSTORMING'
+  | 'TASK-EXAMPLE'
+  | 'TASK-QUOTE'
+  | 'TASK-NOTE'
+  | 'TASK-WIN'
+  | 'TASK-LOSE';

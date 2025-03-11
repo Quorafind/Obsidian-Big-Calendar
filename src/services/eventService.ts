@@ -48,6 +48,7 @@ class EventService {
         }
       });
 
+      // Update the store with all events
       useEventStore.getState().setEvents(events);
 
       if (!this.initialized) {
@@ -58,6 +59,89 @@ class EventService {
     } catch (error) {
       console.error('Failed to fetch events:', error);
       return [];
+    }
+  }
+
+  /**
+   * Filter events
+   * /
+
+  /**
+   * Filter events based on filter criteria
+   * @param filterCriteria Optional filter criteria object
+   * @returns Array of filtered events
+   */
+  public filterEvents(filterCriteria?: Model.EventFilter) {
+    try {
+      // Get all events from the store
+      const allEvents = useEventStore.getState().allEvents;
+
+      // If no filter criteria or empty filter, return all events
+      if (!filterCriteria || Object.keys(filterCriteria).length === 0) {
+        useEventStore.getState().setFilteredEvents(allEvents);
+        return allEvents;
+      }
+
+      // Apply filters
+      let filteredEvents = [...allEvents];
+
+      console.log('filterCriteria', filterCriteria);
+
+      // Filter by event type if specified
+      if (filterCriteria.eventType) {
+        filteredEvents = filteredEvents.filter((event) => event.eventType === filterCriteria.eventType);
+      }
+
+      // Filter by content text if specified
+      if (filterCriteria.contentText) {
+        const searchText = filterCriteria.contentText.toLowerCase();
+        filteredEvents = filteredEvents.filter((event) => event.title.toLowerCase().includes(searchText));
+      }
+
+      // Filter by content regex if specified
+      if (filterCriteria.contentRegex) {
+        try {
+          const regex = new RegExp(filterCriteria.contentRegex);
+          filteredEvents = filteredEvents.filter((event) => regex.test(event.title));
+        } catch (error) {
+          console.error('Invalid regex pattern:', filterCriteria.contentRegex);
+        }
+      }
+
+      // Filter by folder paths if specified
+      if (filterCriteria.folderPaths && filterCriteria.folderPaths.length > 0) {
+        filteredEvents = filteredEvents.filter((event) => {
+          if (!event.path) return false;
+          return filterCriteria.folderPaths.some((folderPath) => event.path.startsWith(folderPath));
+        });
+      }
+
+      // Filter by date range if specified
+      if (filterCriteria.startDate && filterCriteria.endDate) {
+        const startTimestamp = new Date(filterCriteria.startDate).getTime();
+        const endTimestamp = new Date(filterCriteria.endDate).getTime();
+
+        filteredEvents = filteredEvents.filter((event) => {
+          const eventStartTime = new Date(event.start).getTime();
+          return eventStartTime >= startTimestamp && eventStartTime <= endTimestamp;
+        });
+      } else if (filterCriteria.startDate) {
+        // Filter by start date only
+        const startTimestamp = new Date(filterCriteria.startDate).getTime();
+        filteredEvents = filteredEvents.filter((event) => new Date(event.start).getTime() >= startTimestamp);
+      } else if (filterCriteria.endDate) {
+        // Filter by end date only
+        const endTimestamp = new Date(filterCriteria.endDate).getTime();
+        filteredEvents = filteredEvents.filter((event) => new Date(event.start).getTime() <= endTimestamp);
+      }
+
+      // Update the store with filtered events
+      useEventStore.getState().setFilteredEvents(filteredEvents);
+
+      return filteredEvents;
+    } catch (error) {
+      console.error('Failed to filter events:', error);
+      return useEventStore.getState().allEvents;
     }
   }
 

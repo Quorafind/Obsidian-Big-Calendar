@@ -2,54 +2,33 @@ import {create} from 'zustand';
 
 // Define the state interface
 export interface LocationState extends AppLocation {
-  // Actions
-  setLocation: (location: AppLocation) => void;
-  setPathname: (pathname: AppRouter) => void;
   setQuery: (query: Query) => void;
   setQueryFilter: (filter: string) => void;
   setTagQuery: (tag: string) => void;
   setDurationQuery: (duration: TDuration | null) => void;
-  setType: (type: EventSpecType | '') => void;
+  setEventType: (eventType: EventSpecType | '') => void;
   setText: (text: string) => void;
   setHash: (hash: string) => void;
+  // New filter methods
+  setContentRegex: (contentRegex: string) => void;
+  setFolderPaths: (folderPaths: string[]) => void;
+  setMetadataKeys: (metadataKeys: string[]) => void;
+  setMetadataValues: (metadataValues: Record<string, string>) => void;
 }
 
 // Create the store using Zustand
 const useLocationStore = create<LocationState>((set, get) => ({
-  // Initial state
-  pathname: '/',
   hash: '',
   query: {
     tag: '',
     duration: null,
     text: '',
-    type: '',
+    eventType: '',
     filter: '',
-  },
-
-  // Actions
-  setLocation: (location) => {
-    // Only update if values have changed
-    const state = get();
-    const hasChanges =
-      location.pathname !== state.pathname ||
-      location.hash !== state.hash ||
-      JSON.stringify(location.query) !== JSON.stringify(state.query);
-
-    if (hasChanges) {
-      set(location);
-    }
-  },
-
-  setPathname: (pathname) => {
-    // Only update if pathname has changed
-    const currentPathname = get().pathname;
-    if (pathname !== currentPathname) {
-      set((state) => ({
-        ...state,
-        pathname,
-      }));
-    }
+    contentRegex: '',
+    folderPaths: [],
+    metadataKeys: [],
+    metadataValues: {},
   },
 
   setQuery: (query) => {
@@ -108,15 +87,15 @@ const useLocationStore = create<LocationState>((set, get) => ({
     }
   },
 
-  setType: (type) => {
+  setEventType: (eventType) => {
     // Only update if type has changed
-    const currentType = get().query.type;
-    if (type !== currentType) {
+    const currentEventType = get().query.eventType;
+    if (eventType !== currentEventType) {
       set((state) => ({
         ...state,
         query: {
           ...state.query,
-          type,
+          eventType,
         },
       }));
     }
@@ -143,6 +122,72 @@ const useLocationStore = create<LocationState>((set, get) => ({
       set((state) => ({
         ...state,
         hash,
+      }));
+    }
+  },
+
+  // New filter methods
+  setContentRegex: (contentRegex) => {
+    // Only update if contentRegex has changed
+    const currentContentRegex = get().query.contentRegex || '';
+    if (contentRegex !== currentContentRegex) {
+      set((state) => ({
+        ...state,
+        query: {
+          ...state.query,
+          contentRegex,
+        },
+      }));
+    }
+  },
+
+  setFolderPaths: (folderPaths) => {
+    // Only update if folderPaths has changed
+    const currentFolderPaths = get().query.folderPaths || [];
+    const folderPathsJson = JSON.stringify(folderPaths);
+    const currentFolderPathsJson = JSON.stringify(currentFolderPaths);
+
+    if (folderPathsJson !== currentFolderPathsJson) {
+      set((state) => ({
+        ...state,
+        query: {
+          ...state.query,
+          folderPaths,
+        },
+      }));
+    }
+  },
+
+  setMetadataKeys: (metadataKeys) => {
+    // Only update if metadataKeys has changed
+    const currentMetadataKeys = get().query.metadataKeys || [];
+    const metadataKeysJson = JSON.stringify(metadataKeys);
+    const currentMetadataKeysJson = JSON.stringify(currentMetadataKeys);
+
+    if (metadataKeysJson !== currentMetadataKeysJson) {
+      set((state) => ({
+        ...state,
+        query: {
+          ...state.query,
+          metadataKeys,
+        },
+      }));
+    }
+  },
+
+  setMetadataValues: (metadataValues) => {
+    // Only update if metadataValues has changed
+    const currentMetadataValues = get().query.metadataValues || {};
+    const metadataValuesJson = JSON.stringify(metadataValues);
+    const currentMetadataValuesJson = JSON.stringify(currentMetadataValues);
+
+    if (metadataValuesJson !== currentMetadataValuesJson) {
+      set((state) => ({
+        ...state,
+        query: {
+          ...state.query,
+          metadataValues,
+        },
       }));
     }
   },

@@ -1,7 +1,7 @@
 import {TFolder, TFile, Notice, App} from 'obsidian';
 import {getAllDailyNotes, getDailyNoteSettings, getDateFromFile} from 'obsidian-daily-notes-interface';
 import {getAllLinesFromFile} from '@/utils/fileParser';
-import {fileService, globalService} from '@/services';
+import {fileService, globalService, locationService} from '@/services';
 import {BigCalendarSettings} from '@/setting';
 import {t} from '@/translations/helper';
 import {parseLine, lineContainsParseBelowToken, lineContainsTime, convertToEvent} from './parser';
@@ -109,14 +109,86 @@ export async function getEventsFromDailyNote(
   }, 'Failed to get events from daily note');
 }
 
+// Function to check if the file metadata matches the filter criteria
+async function fileHasMatchingMetadata(
+  file: TFile,
+  metadataKeys: string[],
+  metadataValues: Record<string, string>,
+): Promise<boolean> {
+  try {
+    // Get file metadata
+    const app = fileService.getState().app;
+    // @ts-ignore - Access to Obsidian's internal API
+    const fileCache = app.metadataCache.getFileCache(file);
+
+    if (!fileCache || !fileCache.frontmatter) {
+      return false;
+    }
+
+    const frontmatter = fileCache.frontmatter;
+
+    // Check if all required metadata keys exist
+    if (metadataKeys.length > 0) {
+      const hasMissingKey = metadataKeys.some((key) => !Object.prototype.hasOwnProperty.call(frontmatter, key));
+      if (hasMissingKey) {
+        return false;
+      }
+    }
+
+    // Check if all metadata key-value pairs match
+    if (Object.keys(metadataValues).length > 0) {
+      for (const [key, value] of Object.entries(metadataValues)) {
+        if (frontmatter[key] !== value) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking file metadata:', error);
+    return false;
+  }
+}
+
+// Check if the event matches the filter criteria
+export function eventMatchesFilter(event: Model.Event, filter: Query): boolean {
+  // Filter by event type
+  if (filter.eventType && event.eventType !== filter.eventType) {
+    return false;
+  }
+
+  // Filter by content regex
+  if (filter.contentRegex) {
+    try {
+      const regex = new RegExp(filter.contentRegex);
+      if (!regex.test(event.title)) {
+        return false;
+      }
+    } catch (error) {
+      console.error('Invalid regex pattern:', filter.contentRegex);
+      // Invalid regex - we'll skip this filter
+    }
+  }
+
+  // Filter by folder paths (if event has a path property)
+  if (filter.folderPaths && filter.folderPaths.length > 0 && event.path) {
+    const matchesAnyFolder = filter.folderPaths.some((folderPath) => event.path!.startsWith(folderPath));
+    if (!matchesAnyFolder) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export async function getEvents(app: App): Promise<Model.Event[]> {
   return await safeExecute(async () => {
-    const events: Model.Event[] = [];
+    const allEvents: Model.Event[] = [];
     const {folder} = getDailyNoteSettings();
+    const filter = locationService.getState().query;
 
     if (!app) return [];
-
-    console.log('fetching');
 
     const dailyNotesFolder = app.vault.getFolderByPath(folder) as TFolder;
     if (!dailyNotesFolder) {
@@ -127,14 +199,36 @@ export async function getEvents(app: App): Promise<Model.Event[]> {
     // Get all daily notes
     const dailyNotes = getAllDailyNotes();
 
+    // Only filter files if metadata filters are applied
+    const needsMetadataFiltering =
+      (filter.metadataKeys && filter.metadataKeys.length > 0) ||
+      (filter.metadataValues && Object.keys(filter.metadataValues).length > 0);
+
     // Process each daily note
     for (const key in dailyNotes) {
       if (dailyNotes[key] instanceof TFile) {
-        await getEventsFromDailyNote(dailyNotes[key], events);
+        const file = dailyNotes[key] as TFile;
+
+        // Apply metadata filtering if needed
+        if (needsMetadataFiltering) {
+          const hasMatchingMetadata = await fileHasMatchingMetadata(
+            file,
+            filter.metadataKeys || [],
+            filter.metadataValues || {},
+          );
+
+          if (!hasMatchingMetadata) {
+            continue; // Skip this file
+          }
+        }
+
+        // Get events from the file
+        const events = await getEventsFromDailyNote(file, []);
+        allEvents.push(...events);
       }
     }
 
-    return events;
+    return allEvents;
   }, 'Failed to get events');
 }
 

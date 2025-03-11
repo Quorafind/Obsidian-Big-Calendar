@@ -21,6 +21,15 @@ declare namespace Model {
     blockLink?: string;
   }
 
+  interface EventFilter {
+    eventType?: string;
+    contentText?: string;
+    contentRegex?: string;
+    folderPaths?: string[];
+    startDate?: Date | string;
+    endDate?: Date | string;
+  }
+
   interface Query extends BaseModel {
     title: string;
     querystring: string;

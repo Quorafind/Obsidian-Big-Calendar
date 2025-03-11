@@ -46,13 +46,11 @@ export const useShowSidebar = () => useGlobalStateStore((state) => state.showSid
 
 // Optimized version of useLocation to prevent infinite loops
 export const useLocation = () => {
-  // Use separate selectors for each property instead of creating an object
-  const pathname = useLocationStore((state) => state.pathname);
   const hash = useLocationStore((state) => state.hash);
   const query = useLocationStore((state) => state.query);
 
   // Create a ref to cache previous values
-  const prevValuesRef = useRef({pathname, hash, query: JSON.stringify(query)});
+  const prevValuesRef = useRef({hash, query: JSON.stringify(query)});
 
   // Return memoized location object
   return useMemo(() => {
@@ -60,10 +58,9 @@ export const useLocation = () => {
     const queryString = JSON.stringify(query);
 
     // Check if any values have changed
-    if (pathname !== prevValues.pathname || hash !== prevValues.hash || queryString !== prevValues.query) {
+    if (hash !== prevValues.hash || queryString !== prevValues.query) {
       // Update ref with new values
       prevValuesRef.current = {
-        pathname,
         hash,
         query: queryString,
       };
@@ -71,11 +68,10 @@ export const useLocation = () => {
 
     // Return location object
     return {
-      pathname,
       hash,
       query,
     };
-  }, [pathname, hash, query]);
+  }, [hash, query]);
 };
 
 export default useStore;

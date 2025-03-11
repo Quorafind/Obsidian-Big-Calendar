@@ -6,15 +6,16 @@ interface TDuration {
 interface Query {
   tag: string;
   duration: TDuration | null;
-  type: EventSpecType | '';
+  eventType: EventSpecType | '';
   text: string;
   filter: string;
+  contentRegex?: string;
+  folderPaths?: string[];
+  metadataKeys?: string[];
+  metadataValues?: Record<string, string>;
 }
 
-type AppRouter = '/' | '/explore' | '/manage' | '/event' | '/setting';
-
 interface AppLocation {
-  pathname: AppRouter;
   hash: string;
   query: Query;
 }
