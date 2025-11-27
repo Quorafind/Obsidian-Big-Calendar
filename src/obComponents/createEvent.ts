@@ -185,6 +185,18 @@ export async function insertAfterHandler(
       };
     }
 
+    // Move past all of the existing items
+    for (let i = pos + 1; i < lines.length; i++) {
+      const nextLine = lines[i];
+      if (nextLine == null) { break; }
+      // Assume items starts with 'bullet points'
+      if (nextLine.startsWith('- ')) {
+        continue;
+      }
+      pos = i - 1;
+      break;
+    }
+
     // Insert after the found position
     return await insertTextAfterPositionInBody(formatted, fileContent, pos, found);
   }, 'Failed to insert after handler');
