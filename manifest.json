@@ -2,7 +2,7 @@
   "id": "big-calendar",
   "name": "Big Calendar",
   "description": "Supports drag and drop, resizing, and more for events in Obsidian (fixed date parsing for weekday-named daily notes and Monday week start)",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "author": "Boninall",
   "authorUrl": "https://github.com/Quorafind/",
   "isDesktopOnly": false,

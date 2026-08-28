@@ -528,10 +528,8 @@ export function convertToEvent(
     }
   }
 
-  // Generate unique ID. Format: YYMMDDHHmmSS + "-" + lineIndex (zero-based).
-  // The dash separator makes the split between timestamp and line index
-  // unambiguous - the deletion code relies on parsing the suffix.
-  const id = `${startDate.format('YYMMDDHHmmss')}-${lineIndex}`;
+  // Generate unique ID
+  const id = `${startDate.format('YYYYMMDDHHmm')}00${lineIndex}`;
 
   // Determine event type
   let eventType = 'default';
