@@ -76,16 +76,16 @@ const useCalendarStore = create<CalendarState>((set, get) => ({
   },
 
   setStartDay: (startDay) => {
-    // Only update if the value has changed
-    if (get().startDay !== startDay) {
-      set({startDay});
+    set({startDay});
 
-      // Update moment locale based on start day
-      if (startDay === 'sunday') {
-        moment.updateLocale('en', {week: {dow: 0}});
-      } else {
-        moment.updateLocale('en', {week: {dow: 1}});
-      }
+    // Update the ACTIVE moment locale (whatever it is) based on start day.
+    // The calendar grid derives its week start from the active locale, and
+    // since the store's default may already match the setting, this must run
+    // unconditionally - otherwise the locale is never applied.
+    if (startDay === 'sunday') {
+      moment.updateLocale(moment.locale(), {week: {dow: 0}});
+    } else {
+      moment.updateLocale(moment.locale(), {week: {dow: 1}});
     }
   },
 

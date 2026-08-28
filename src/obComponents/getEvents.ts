@@ -1,5 +1,6 @@
 import {TFolder, TFile, Notice, App} from 'obsidian';
-import {getAllDailyNotes, getDailyNoteSettings, getDateFromFile} from 'obsidian-daily-notes-interface';
+import {getAllDailyNotes, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
+import {getDateFromFileFromFullPath} from '@/utils/dailyNoteDate';
 import {getAllLinesFromFile} from '@/utils/fileParser';
 import {fileService, globalService, locationService} from '@/services';
 import {BigCalendarSettings} from '@/setting';
@@ -64,7 +65,7 @@ export async function getEventsFromDailyNote(
 
     const fileContents = await vault.read(dailyNote);
     const fileLines = getAllLinesFromFile(fileContents);
-    const startDate = getDateFromFile(dailyNote, 'day');
+    const startDate = getDateFromFileFromFullPath(dailyNote, 'day');
     const result: Model.Event[] = [];
 
     // Find the parse below token

@@ -6,7 +6,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import type BigCalendarPlugin from './index';
 import {fileService, eventService} from '@/services';
-import {getDateFromFile} from 'obsidian-daily-notes-interface';
+import {getDateFromFileFromFullPath} from '@/utils/dailyNoteDate';
 import {ViewProvider} from '@/hooks/useView';
 import {t} from '@/translations/helper';
 
@@ -32,7 +32,7 @@ export class BigCalendar extends ItemView {
   }
 
   private async onFileDeleted(file: TFile): Promise<void> {
-    if (getDateFromFile(file, 'day')) {
+    if (getDateFromFileFromFullPath(file, 'day')) {
       // Get updates only for this specific file's events
       eventService.clearEventsForFile(file.path);
 
@@ -42,7 +42,7 @@ export class BigCalendar extends ItemView {
   }
 
   private async onFileModified(file: TFile): Promise<void> {
-    const date = getDateFromFile(file, 'day');
+    const date = getDateFromFileFromFullPath(file, 'day');
 
     if (date && this.root) {
       // Update only events from this specific file
@@ -52,7 +52,7 @@ export class BigCalendar extends ItemView {
 
   private onFileCreated(file: TFile): void {
     if (this.app.workspace.layoutReady && this.root) {
-      if (getDateFromFile(file, 'day')) {
+      if (getDateFromFileFromFullPath(file, 'day')) {
         // Update our files list
         fileService.getAllFiles();
 
