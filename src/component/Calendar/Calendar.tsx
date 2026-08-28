@@ -314,19 +314,31 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
 
   // Helper: find the date from a clicked calendar cell
   const getDateFromCell = useCallback((target: HTMLElement): Date | null => {
-    const cell = target.closest('.rbc-day-bg') as HTMLElement;
+    // Walk up to find the day-bg cell — clicks on the date number area
+    // (.rbc-date-cell), event area, or empty space all need to resolve
+    // to the same date.
+    const cell = target.closest('.rbc-day-bg') as HTMLElement
+      || target.closest('.rbc-date-cell') as HTMLElement
+      || target.closest('.rbc-day-slot') as HTMLElement;
     if (!cell) return null;
-    const row = cell.parentElement;
+    const row = cell.closest('.rbc-month-row') || cell.closest('.rbc-week-row') || cell.parentElement;
     if (!row) return null;
-    const cells = Array.from(row.children);
-    const colIndex = cells.indexOf(cell);
-    const rows = Array.from(row.parentElement?.children || []);
-    const rowIndex = rows.indexOf(row);
+    const cells = Array.from(row.querySelectorAll('.rbc-day-bg'));
+    const colIndex = cells.indexOf(cell.closest('.rbc-day-bg') as HTMLElement ?? cell);
+    const rows = Array.from(row.parentElement?.querySelectorAll('.rbc-month-row, .rbc-week-row') || []);
+    const rowIndex = rows.indexOf(row as HTMLElement);
     if (colIndex < 0 || rowIndex < 0) return null;
-    // Calculate the date from grid position
     const firstDay = moment(calendarDate).startOf('month').startOf('week');
     return firstDay.clone().add(rowIndex * 7 + colIndex, 'days').toDate();
   }, [calendarDate]);
+
+  // Helper: check if a daily note exists for a date
+  const hasDailyNote = useCallback((date: Date): boolean => {
+    const m = moment(date);
+    const files = getAllDailyNotes();
+    const key = `day-${m.clone().startOf('day').format()}`;
+    return !!files[key];
+  }, []);
 
   // Helper: open or create daily note for a date
   const openDailyNote = useCallback(async (date: Date) => {
@@ -380,9 +392,10 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       const date = getDateFromCell(target);
       if (!date) return;
       e.preventDefault();
+      const exists = hasDailyNote(date);
       const menu = new Menu();
       menu.addItem((item) => {
-        item.setTitle('Open daily note').setIcon('file-text').onClick(() => openDailyNote(date));
+        item.setTitle(exists ? 'Open daily note' : 'Create daily note').setIcon(exists ? 'file-text' : 'file-plus').onClick(() => openDailyNote(date));
       });
       menu.addItem((item) => {
         item.setTitle('Add event').setIcon('plus').onClick(async () => {
@@ -393,12 +406,14 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
           if (addEvent) handleEventSelectCallback(addEvent, {start: date, end: endDate} as any);
         });
       });
-      menu.addSeparator();
-      menu.addItem((item) => {
-        item.setTitle('Delete daily note').setIcon('trash');
-        (item as any).setWarning?.(true);
-        item.onClick(() => deleteDailyNote(date));
-      });
+      if (exists) {
+        menu.addSeparator();
+        menu.addItem((item) => {
+          item.setTitle('Delete daily note').setIcon('trash');
+          (item as any).setWarning?.(true);
+          item.onClick(() => deleteDailyNote(date));
+        });
+      }
       menu.showAtMouseEvent(e);
     };
 
