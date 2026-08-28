@@ -171,10 +171,10 @@ class EventService {
    * @returns Whether operation was successful
    */
   public async hideEventById(id: string) {
-    useEventStore.getState().deleteEventById(id);
-
     try {
       await hideEvent(id);
+      // Only remove from store after the file has been successfully modified
+      useEventStore.getState().deleteEventById(id);
       return true;
     } catch (err) {
       console.error('Failed to hide event:', err);
