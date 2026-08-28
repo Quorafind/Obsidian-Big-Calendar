@@ -1,4 +1,5 @@
-import {moment} from 'obsidian';
+import {moment, TFile} from 'obsidian';
+import {getDailyNoteSettings} from 'obsidian-daily-notes-interface';
 import {fileService, globalService} from '@/services';
 import {sendEventToDelete} from './deleteEvent';
 import {safeExecute} from '@/api';
@@ -25,16 +26,26 @@ export async function hideEvent(eventid: string): Promise<any> {
     const idString = parseInt(eventid.slice(14));
     const changeDate = moment(timeString, 'YYYYMMDDHHmmSS');
 
-    // Find the daily note using full-path date parsing (the library's
-    // getDailyNote uses basename-only parsing which fails for weekday-named
-    // files in other months).
-    const allFiles = fileService.getState().files || {};
+    // Find the daily note by walking the vault directly. The files store
+    // uses the library's getAllDailyNotes which drops files whose basename
+    // can't be parsed (weekday-named files in other months), so we can't
+    // rely on it.
+    const {folder} = getDailyNoteSettings();
     let dailyNote: any = null;
-    for (const key of Object.keys(allFiles)) {
-      const f = allFiles[key];
-      if (f && getDateFromFileFromFullPath(f, 'day')?.isSame(changeDate, 'day')) {
-        dailyNote = f;
-        break;
+    if (folder) {
+      const root = vault.getAbstractFileByPath(folder);
+      if (root) {
+        const walk = (af: any) => {
+          if (dailyNote) return;
+          if (af instanceof TFile) {
+            if (getDateFromFileFromFullPath(af, 'day')?.isSame(changeDate, 'day')) {
+              dailyNote = af;
+            }
+          } else if (af.children) {
+            for (const child of af.children) walk(child);
+          }
+        };
+        walk(root);
       }
     }
     if (!dailyNote) {
