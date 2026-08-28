@@ -170,7 +170,7 @@ const EventComponent: React.FC<EventProps<Event>> = ({
         .setIcon('trash')
         .onClick(async () => {
           try {
-            await eventService.deleteEventById(event.id);
+            await eventService.hideEventById(event.id);
             console.log('Event deleted successfully');
           } catch (error) {
             console.error('Error deleting event:', error);

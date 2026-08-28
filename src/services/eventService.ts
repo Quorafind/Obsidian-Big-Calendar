@@ -209,10 +209,10 @@ class EventService {
   public async editEvent(event: Model.Event, startDate: stringOrDate, endDate: stringOrDate, newTitle?: string) {
     try {
       if (startDate && endDate && event.id && event.title) {
-        // 记录原始ID以便跟踪
+        // Record original ID for tracking
         const originalEventId = event.id;
 
-        // 先执行changeEvent，让文件更新完成
+        // Execute changeEvent first, wait for file update
         const updatedEvent = await changeEvent(
           event.id,
           event.originalContent || event.title,
@@ -224,7 +224,7 @@ class EventService {
           event.path,
         );
 
-        // 检查updatedEvent.id与原始event.id是否相同
+        // Check if updatedEvent.id matches original event.id
         if (updatedEvent.id !== originalEventId) {
           console.log('Event ID changed from', originalEventId, 'to', updatedEvent.id);
 
@@ -232,14 +232,14 @@ class EventService {
           const idToDelete = (updatedEvent as any).originalEventId || originalEventId;
           console.log('Deleting event with ID:', idToDelete);
 
-          // 先从状态中删除旧事件
+          // 先from状态中删除旧事件
           useEventStore.getState().deleteEventById(idToDelete);
 
           // 移除不需要持久化的字段
           const cleanEvent = {...updatedEvent};
           delete (cleanEvent as any).originalEventId;
 
-          // 再添加新事件到状态
+          // 再添加新事件to状态
           useEventStore.getState().insertEvent(cleanEvent);
           console.log('Inserted new event with ID:', cleanEvent.id);
           console.log('Old event path:', event.path);
@@ -251,30 +251,30 @@ class EventService {
 
           // 更新fileEventMap - 处理旧路径
           if (event.path) {
-            // 从原始文件路径中移除旧事件
+            // from原始File path中移除旧事件
             const oldEvents = this.fileEventMap.get(event.path) || [];
             console.log('oldEvents in original path:', oldEvents);
             const updatedEvents = oldEvents.filter((e) => e.id !== idToDelete);
 
-            // 如果更新后事件列表为空，则从map中删除该路径
+            // 如果更新后事件列表为空，则frommap中删除该路径
             if (updatedEvents.length === 0) {
               this.fileEventMap.delete(event.path);
               console.log('Removed empty path:', event.path);
             } else {
-              // 更新原始文件路径的事件列表
+              // 更新原始File path的事件列表
               this.fileEventMap.set(event.path, updatedEvents);
               console.log('Updated events in original path:', event.path);
             }
           }
 
-          // 处理新路径 - 确保新事件被添加到正确的文件路径下
+          // 处理新路径 - 确保新事件被添加to正确的File path下
           if (newPath) {
-            // 从新文件路径中获取事件列表
+            // from新File path中获取事件列表
             const newPathEvents = this.fileEventMap.get(newPath) || [];
 
             // 确保不重复添加事件
             if (!newPathEvents.some((e) => e.id === cleanEvent.id)) {
-              // 添加新事件到新的文件事件列表
+              // 添加新事件to新的文件事件列表
               newPathEvents.push(cleanEvent);
 
               // 更新map
@@ -282,11 +282,11 @@ class EventService {
               console.log('Added event to new path:', newPath);
             }
 
-            // 更新事件对象的path属性
+            // Update event对象的path属性
             cleanEvent.path = newPath;
           }
         } else {
-          // 如果ID没变，正常更新事件状态
+          // 如果ID没变，正常Update event状态
           console.log('event path', event.path);
           useEventStore.getState().editEvent(updatedEvent);
           console.log('Updated existing event with same ID:', updatedEvent.id);

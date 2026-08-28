@@ -164,7 +164,7 @@ export async function changeEvent(
       );
     }
 
-    // 添加原始事件ID到结果中，帮助状态管理跟踪
+    // 添加原始事件IDto结果中，帮助状态管理跟踪
     return {
       ...result,
       originalEventId: originalEventId,
@@ -614,7 +614,7 @@ export function extractEventEndMinFromLine(line: string): number {
 function findInsertPosition(fileLines: string[], eventType: string): number {
   // For todos, prefer to insert after an existing todo section
   if (eventType === 'TASK-TODO' || eventType === 'default') {
-    // 首先尝试找到事件或任务块的结尾
+    // 首先尝试找to事件或任务块的结尾
     let eventBlockEnd = -1;
 
     // 查找任务块的结束位置
@@ -630,25 +630,25 @@ function findInsertPosition(fileLines: string[], eventType: string): number {
         (line.startsWith('- ') && (line.includes(' 📅 ') || line.includes(' 🛫 '))); // 带日期的条目
 
       if (isTaskOrEvent) {
-        // 找到最后一个任务或事件行
+        // 找to最后一个任务或事件行
         eventBlockEnd = i + 1;
       }
     }
 
-    // 如果找到了事件块，返回它的结束位置
+    // 如果找to了事件块，返回它的结束位置
     if (eventBlockEnd > 0) {
       return eventBlockEnd;
     }
   }
 
-  // 如果没找到适合的位置，尝试在指定的标题后插入
+  // 如果没找to适合的位置，尝试在指定的标题后插入
   const {pluginSetting} = globalService.getState();
   const insertAfterText = pluginSetting.InsertAfter;
 
   if (insertAfterText && insertAfterText.trim() !== '') {
     for (let i = 0; i < fileLines.length; i++) {
       if (fileLines[i].includes(insertAfterText)) {
-        // 找到标题后的第一个非空行
+        // 找to标题后的第一个非空行
         let j = i + 1;
         while (j < fileLines.length && fileLines[j].trim() === '') {
           j++;
@@ -690,10 +690,10 @@ function findInsertPosition(fileLines: string[], eventType: string): number {
  *
  * @param fileLines 文件内容行
  * @param eventid 事件ID
- * @param originalContent 原始内容
- * @param originalStartDate 原始开始日期
- * @param eventType 事件类型
- * @returns 找到的行索引，未找到则返回-1
+ * @param originalContent Original content
+ * @param originalStartDate 原始Start date
+ * @param eventType Event type
+ * @returns 找to的行索引，未找to则返回-1
  */
 function findEventLine(
   fileLines: string[],
@@ -702,14 +702,14 @@ function findEventLine(
   originalStartDate: moment.Moment,
   eventType: string,
 ): number {
-  // 从事件ID提取时间信息和行号（如果存在）
+  // from事件ID提取时间信息和行号（如果存在）
   const timeString = eventid.slice(0, 12); // 格式: YYYYMMDDHHmm
 
   // 检查eventId是否包含行号信息
   const lineNumberMatch = eventid.match(/_L(\d+)$/);
   if (lineNumberMatch) {
     const lineNumber = parseInt(lineNumberMatch[1]);
-    // 确认该行存在且包含原始内容
+    // 确认该行存在且包含Original content
     if (lineNumber < fileLines.length && fileLines[lineNumber].includes(originalContent)) {
       return lineNumber;
     }
@@ -721,7 +721,7 @@ function findEventLine(
   for (let i = 0; i < fileLines.length; i++) {
     const line = fileLines[i];
 
-    // 如果行包含原始内容，并且格式正确
+    // 如果行包含Original content，并且格式正确
     if (line.includes(originalContent) && line.startsWith('- ')) {
       // 检查是否是任务行（对于任务类型的事件）
       if (eventType.startsWith('TASK-') && (line.includes(`- [${mark}]`) || line.match(/- \[[^\]]\]/))) {
@@ -749,7 +749,7 @@ function findEventLine(
     }
   }
 
-  // 如果没有找到精确匹配，尝试更模糊的匹配
+  // 如果没有找to精确匹配，尝试更模糊的匹配
   for (let i = 0; i < fileLines.length; i++) {
     if (fileLines[i].includes(originalContent)) {
       return i;

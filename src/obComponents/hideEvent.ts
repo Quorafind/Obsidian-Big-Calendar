@@ -1,19 +1,19 @@
 import {moment} from 'obsidian';
-import {getDailyNote} from 'obsidian-daily-notes-interface';
 import {fileService, globalService} from '@/services';
 import {sendEventToDelete} from './deleteEvent';
 import {safeExecute} from '@/api';
 import {BigCalendarSettings} from '@/setting';
+import {getDateFromFileFromFullPath} from '@/utils/dailyNoteDate';
 
 /**
- * 隐藏事件（将事件从日记笔记中移除并发送到删除文件）
+ * Hide event (remove from daily note and send to delete file)
  *
- * @param eventid 要隐藏的事件ID
+ * @param eventid Event ID to hide
  * @returns Promise解析为删除的事件信息
  */
 export async function hideEvent(eventid: string): Promise<any> {
   return await safeExecute(async () => {
-    const {files, app} = fileService.getState();
+    const {app} = fileService.getState();
     const {vault} = app;
     const settings = globalService.getState().pluginSetting;
 
@@ -25,13 +25,23 @@ export async function hideEvent(eventid: string): Promise<any> {
     const idString = parseInt(eventid.slice(14));
     const changeDate = moment(timeString, 'YYYYMMDDHHmmSS');
 
-    // 获取日记笔记文件
-    const dailyNote = getDailyNote(changeDate, files);
+    // Find the daily note using full-path date parsing (the library's
+    // getDailyNote uses basename-only parsing which fails for weekday-named
+    // files in other months).
+    const allFiles = fileService.getState().files || {};
+    let dailyNote: any = null;
+    for (const key of Object.keys(allFiles)) {
+      const f = allFiles[key];
+      if (f && getDateFromFileFromFullPath(f, 'day')?.isSame(changeDate, 'day')) {
+        dailyNote = f;
+        break;
+      }
+    }
     if (!dailyNote) {
       throw new Error(`Daily note not found for date: ${changeDate.format('YYYY-MM-DD')}`);
     }
 
-    // 读取文件内容
+    // Read file content
     const fileContent = await vault.read(dailyNote);
     const fileLines = getAllLinesFromFile(fileContent);
 
@@ -39,22 +49,22 @@ export async function hideEvent(eventid: string): Promise<any> {
       throw new Error(`Event line ${idString} not found in file`);
     }
 
-    // 提取事件内容
+    // Extract event content
     const content = extractContentfromText(fileLines[idString], settings);
     const originalLine = '- ' + eventid + ' ' + content;
     const newLine = fileLines[idString];
 
-    // 从文件中移除事件 - removing by line index via String.replace can miss
+    // Remove event from file - removing by line index via String.replace can miss
     // (e.g. when the recorded index points at a blank line, replace("") is a
     // no-op and the line stays in the file while the event disappears from
     // the calendar). Remove the physical line at the index instead.
     const newFileContent = removeLineAt(fileContent, idString);
     await vault.modify(dailyNote, newFileContent);
 
-    // 将事件发送到删除文件
+    // Send event to delete file
     const deleteDate = await sendEventToDelete(originalLine);
 
-    // 返回删除的事件信息
+    // Return deleted event info
     return {
       id: eventid,
       title: content,
@@ -68,7 +78,7 @@ export async function hideEvent(eventid: string): Promise<any> {
 }
 
 /**
- * 将文件内容分割为行
+ * Split file content into lines
  *
  * @param cache 文件内容
  * @returns 行数组
@@ -87,7 +97,7 @@ const removeLineAt = (body: string, index: number): string => {
 };
 
 /**
- * 从行中提取事件内容
+ * from行中Extract event content
  *
  * @param line 要提取的行
  * @param settings 设置对象
