@@ -359,6 +359,18 @@ button.rbc-input::-moz-focus-inner {
   overflow: hidden;
   height: 100%;
 }
+
+// In month view, the events container overlays the entire week row.
+// Make it transparent to pointer events so right-click/double-click
+// on empty day cells reaches the underlying .rbc-day-bg elements.
+// Individual events re-enable pointer events so they remain clickable.
+.rbc-month-row .rbc-events-container {
+  pointer-events: none;
+}
+.rbc-month-row .rbc-event {
+  pointer-events: auto;
+}
+
 .rbc-month-row + .rbc-month-row {
   border-top: 1px solid var(--background-modifier-border);
 }
