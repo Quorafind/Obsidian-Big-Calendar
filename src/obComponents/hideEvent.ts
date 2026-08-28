@@ -69,7 +69,16 @@ export async function hideEvent(eventid: string): Promise<any> {
     const newFileContent = removeLineAt(fileContent, idString);
     // Re-fetch the file object to ensure Obsidian recognizes the modification
     const freshFile = vault.getAbstractFileByPath(dailyNote.path);
-    await vault.modify(freshFile instanceof TFile ? freshFile : dailyNote, newFileContent);
+    const fileToModify = freshFile instanceof TFile ? freshFile : dailyNote;
+    await vault.modify(fileToModify, newFileContent);
+    // Force the editor to re-read the file from disk
+    const leaves = app.workspace.getLeavesOfType('markdown');
+    for (const leaf of leaves) {
+      const view = leaf.view as any;
+      if (view?.file?.path === dailyNote.path && view?.editor) {
+        view.editor.setValue(newFileContent);
+      }
+    }
 
     // Send event to delete file
     const deleteDate = await sendEventToDelete(originalLine);
