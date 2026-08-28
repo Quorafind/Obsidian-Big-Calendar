@@ -1,5 +1,6 @@
 import {moment} from 'obsidian';
-import {createDailyNote, getAllDailyNotes, getDailyNote} from 'obsidian-daily-notes-interface';
+import {createDailyNote, getDailyNote} from 'obsidian-daily-notes-interface';
+import {getAllDailyNotes} from '@/utils/dailyNoteDate';
 import {stringOrDate} from 'react-big-calendar';
 import {getAllLinesFromFile, safeExecute} from '@/api';
 import fileService from '@/services/fileService';

@@ -2,7 +2,8 @@ import {App, TFile, Vault, moment} from 'obsidian';
 import fileService from '../services/fileService';
 import {stringOrDate} from 'react-big-calendar';
 import {createTimeRegex, getAllLinesFromFile, extractEventTime, safeExecute} from '../api';
-import {getDailyNote, getAllDailyNotes} from 'obsidian-daily-notes-interface';
+import {getDailyNote} from 'obsidian-daily-notes-interface';
+import {getAllDailyNotes} from '@/utils/dailyNoteDate';
 import globalService from '../services/globalService';
 import {getMarkBasedOnEvent} from './parser';
 

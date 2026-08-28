@@ -1,5 +1,6 @@
 import {TFolder, TFile, Notice, App} from 'obsidian';
-import {getAllDailyNotes, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
+import {getDailyNoteSettings} from 'obsidian-daily-notes-interface';
+import {getAllDailyNotes} from '@/utils/dailyNoteDate';
 import {getDateFromFileFromFullPath} from '@/utils/dailyNoteDate';
 import {getAllLinesFromFile} from '@/utils/fileParser';
 import {fileService, globalService, locationService} from '@/services';

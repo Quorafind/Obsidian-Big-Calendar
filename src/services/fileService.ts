@@ -1,5 +1,6 @@
 import useFileStore from '@/stores/fileStore';
-import {createDailyNote, getAllDailyNotes, getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
+import {createDailyNote, getDailyNote, getDailyNoteSettings} from 'obsidian-daily-notes-interface';
+import {getAllDailyNotes} from '@/utils/dailyNoteDate';
 import {App, TFile} from 'obsidian';
 
 class FileService {

@@ -1,5 +1,6 @@
-import {TFile, moment} from 'obsidian';
-import {getDailyNoteSettings, getDateFromFile} from 'obsidian-daily-notes-interface';
+import {TFile, moment, App} from 'obsidian';
+import {getDailyNoteSettings, getDateFromFile, getAllDailyNotes as libGetAllDailyNotes} from 'obsidian-daily-notes-interface';
+import {fileService} from '@/services';
 
 /**
  * Parses a daily note's date from its full path (relative to the daily notes
@@ -30,4 +31,34 @@ export function getDateFromFileFromFullPath(file: TFile, granularity: 'day'): mo
 		// fall through to the library's default behavior
 	}
 	return getDateFromFile(file, granularity);
+}
+
+/**
+ * Like the library's getAllDailyNotes, but keys files by dates parsed from
+ * the full path so that daily notes in other months are not silently
+ * dropped when the basename alone can't be parsed against the current
+ * date's month/year.
+ */
+export function getAllDailyNotes(): Record<string, TFile> {
+	const {folder} = getDailyNoteSettings();
+	const app = fileService.getState().app;
+	if (!app) return {};
+	const root = app.vault.getAbstractFileByPath(folder);
+	if (!root) return {};
+
+	const files: Record<string, TFile> = {};
+	const walk = (abstractFile: any) => {
+		if (abstractFile instanceof TFile) {
+			const date = getDateFromFileFromFullPath(abstractFile, 'day');
+			if (date) {
+				files[`day-${date.clone().startOf('day').format()}`] = abstractFile;
+			}
+		} else if (abstractFile.children) {
+			for (const child of abstractFile.children) {
+				walk(child);
+			}
+		}
+	};
+	walk(app.vault.getAbstractFileByPath(folder));
+	return files;
 }
