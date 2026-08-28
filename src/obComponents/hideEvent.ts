@@ -44,8 +44,11 @@ export async function hideEvent(eventid: string): Promise<any> {
     const originalLine = '- ' + eventid + ' ' + content;
     const newLine = fileLines[idString];
 
-    // 从文件中移除事件
-    const newFileContent = fileContent.replace(newLine, '');
+    // 从文件中移除事件 - removing by line index via String.replace can miss
+    // (e.g. when the recorded index points at a blank line, replace("") is a
+    // no-op and the line stays in the file while the event disappears from
+    // the calendar). Remove the physical line at the index instead.
+    const newFileContent = removeLineAt(fileContent, idString);
     await vault.modify(dailyNote, newFileContent);
 
     // 将事件发送到删除文件
@@ -71,6 +74,17 @@ export async function hideEvent(eventid: string): Promise<any> {
  * @returns 行数组
  */
 const getAllLinesFromFile = (cache: string): string[] => cache.split(/\r?\n/);
+
+/**
+ * Removes the physical line at the given index from the content, keeping
+ * all other lines (including blank ones) intact.
+ */
+const removeLineAt = (body: string, index: number): string => {
+  const lines = body.split(/\r?\n/);
+  if (index < 0 || index >= lines.length) return body;
+  lines.splice(index, 1);
+  return lines.join('\n');
+};
 
 /**
  * 从行中提取事件内容

@@ -62,8 +62,10 @@ export async function waitForInsert(
     const result = await insertEventIntoNote(startMoment, formattedContent, vault, settings.InsertAfter);
     const parsedLine = parseLine(formattedContent);
 
-    // Convert to event - tasks without time info will be treated as all-day events
-    const event = convertToEvent(parsedLine, startMoment, result.lineNum, result.file.path);
+    // Convert to event - tasks without time info will be treated as all-day events.
+    // Use the actual insertion position so the event ID's line index matches
+    // where the line physically lives in the file (needed for later deletion).
+    const event = convertToEvent(parsedLine, startMoment, result.posNum ?? result.lineNum, result.file.path);
     // Create and return the event object
     return event;
   }, 'Failed to create event');
@@ -77,7 +79,7 @@ async function insertEventIntoNote(
   formattedContent: string,
   vault: any,
   insertAfterSetting: string,
-): Promise<{file: any; lineNum: number}> {
+): Promise<{file: any; lineNum: number; posNum?: number}> {
   const dailyNotes = await getAllDailyNotes();
   const existingFile = getDailyNote(startMoment, dailyNotes);
 
@@ -88,7 +90,7 @@ async function insertEventIntoNote(
     const newFileContent = await insertAfterHandler(insertAfterSetting, formattedContent, fileContents);
     await vault.modify(file, newFileContent.content);
 
-    return {file, lineNum: 1};
+    return {file, lineNum: 1, posNum: newFileContent.posNum};
   } else {
     // Use existing daily note
     const fileContents = await vault.read(existingFile);
@@ -111,7 +113,7 @@ async function insertEventIntoNote(
     const newFileContent = await insertAfterHandler(insertAfterSetting, formattedContent, fileContents);
     await vault.modify(existingFile, newFileContent.content);
 
-    return {file: existingFile, lineNum};
+    return {file: existingFile, lineNum, posNum: newFileContent.posNum};
   }
 }
 
