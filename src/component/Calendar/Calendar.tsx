@@ -1,10 +1,10 @@
-import React, {forwardRef, useCallback, useEffect, useMemo, memo, useState} from 'react';
+import React, {forwardRef, useCallback, useEffect, useMemo, memo, useState, useRef} from 'react';
 import '@/less/Calendar.less';
 import '@/less/time-select.less';
 import '@/less/event-styles.less';
 import '@/less/modal.less';
 import {Calendar, Event, momentLocalizer, SlotInfo, View} from 'react-big-calendar';
-import {moment} from 'obsidian';
+import {moment, Menu, TFile, Notice, Platform} from 'obsidian';
 import withDragAndDrop, {withDragAndDropProps} from 'react-big-calendar/lib/addons/dragAndDrop';
 import dailyNotesService from '@/services/fileService';
 import eventService from '@/services/eventService';
@@ -14,6 +14,8 @@ import EventCreatePrompt, {EventCreateResult} from '@/obComponents/EventCreatePr
 import {useEvents} from '@/hooks/useStore';
 import useEventStore from '@/stores/eventStore';
 import locationService from '@/services/locationService';
+import {getAllDailyNotes, getDateFromFileFromFullPath} from '@/utils/dailyNoteDate';
+import {getDailyNoteSettings, createDailyNote} from 'obsidian-daily-notes-interface';
 // Import our custom toolbar
 import CustomToolbar from './CustomToolbar';
 // Import our custom event component
@@ -231,24 +233,12 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
     [handleDoubleClickEventCallback],
   );
 
-  // Handle event selection
+  // Handle event selection - disabled (single click does nothing)
   const handleEventSelect = useCallback(
-    async (slotInfo: SlotInfo) => {
-      const {app} = dailyNotesService.getState();
-
-      // Pass the start and end times from slotInfo to EventCreatePrompt
-      const addEvent = await EventCreatePrompt.Prompt(
-        app,
-        'Input Event',
-        '',
-        '',
-        slotInfo.start as Date,
-        slotInfo.end as Date,
-      );
-
-      handleEventSelectCallback(addEvent, slotInfo);
+    async (_slotInfo: SlotInfo) => {
+      // No-op: single click on empty day does nothing
     },
-    [handleEventSelectCallback],
+    [],
   );
 
   // Handle view changes
@@ -320,6 +310,106 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       });
   }, []);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Helper: find the date from a clicked calendar cell
+  const getDateFromCell = useCallback((target: HTMLElement): Date | null => {
+    const cell = target.closest('.rbc-day-bg') as HTMLElement;
+    if (!cell) return null;
+    const row = cell.parentElement;
+    if (!row) return null;
+    const cells = Array.from(row.children);
+    const colIndex = cells.indexOf(cell);
+    const rows = Array.from(row.parentElement?.children || []);
+    const rowIndex = rows.indexOf(row);
+    if (colIndex < 0 || rowIndex < 0) return null;
+    // Calculate the date from grid position
+    const firstDay = moment(calendarDate).startOf('month').startOf('week');
+    return firstDay.clone().add(rowIndex * 7 + colIndex, 'days').toDate();
+  }, [calendarDate]);
+
+  // Helper: open or create daily note for a date
+  const openDailyNote = useCallback(async (date: Date) => {
+    const {app} = dailyNotesService.getState();
+    if (!app) return;
+    const m = moment(date);
+    const files = getAllDailyNotes();
+    const key = `day-${m.clone().startOf('day').format()}`;
+    let file = files[key];
+    if (!file) {
+      file = await createDailyNote(m);
+    }
+    if (file) {
+      const leaf = app.workspace.getLeaf(!Platform.isMobile);
+      await leaf.openFile(file);
+    }
+  }, []);
+
+  // Helper: delete daily note for a date
+  const deleteDailyNote = useCallback(async (date: Date) => {
+    const {app} = dailyNotesService.getState();
+    if (!app) return;
+    const m = moment(date);
+    const files = getAllDailyNotes();
+    const key = `day-${m.clone().startOf('day').format()}`;
+    const file = files[key];
+    if (file) {
+      await app.vault.delete(file);
+      new Notice(`Deleted: ${file.name}`);
+    } else {
+      new Notice('No daily note to delete');
+    }
+  }, []);
+
+  // Double-click on empty day → open/create daily note
+  // Right-click on day → context menu
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleDblClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.rbc-event')) return; // let event double-click handle it
+      const date = getDateFromCell(target);
+      if (date) openDailyNote(date);
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.rbc-event')) return; // let event right-click handle it
+      const date = getDateFromCell(target);
+      if (!date) return;
+      e.preventDefault();
+      const menu = new Menu();
+      menu.addItem((item) => {
+        item.setTitle('Open daily note').setIcon('file-text').onClick(() => openDailyNote(date));
+      });
+      menu.addItem((item) => {
+        item.setTitle('Add event').setIcon('plus').onClick(async () => {
+          const {app} = dailyNotesService.getState();
+          if (!app) return;
+          const endDate = moment(date).clone().add(1, 'hour').toDate();
+          const addEvent = await EventCreatePrompt.Prompt(app, 'Input Event', '', '', date, endDate);
+          if (addEvent) handleEventSelectCallback(addEvent, {start: date, end: endDate} as any);
+        });
+      });
+      menu.addSeparator();
+      menu.addItem((item) => {
+        item.setTitle('Delete daily note').setIcon('trash');
+        (item as any).setWarning?.(true);
+        item.onClick(() => deleteDailyNote(date));
+      });
+      menu.showAtMouseEvent(e);
+    };
+
+    container.addEventListener('dblclick', handleDblClick);
+    container.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      container.removeEventListener('dblclick', handleDblClick);
+      container.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [getDateFromCell, openDailyNote, deleteDailyNote, handleEventSelectCallback]);
+
   // Memoize calendar props to prevent unnecessary re-renders
   const calendarProps = useMemo(() => {
     return {
@@ -376,7 +466,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
   ]);
 
   return (
-    <div className="calendar-container">
+    <div className="calendar-container" ref={containerRef}>
       <div className="calendar-filters">
         <FilterComponent onFilterChange={handleFilterChange} />
         {(isRefreshing || isLoading) && (
