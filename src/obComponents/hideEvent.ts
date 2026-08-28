@@ -65,12 +65,11 @@ export async function hideEvent(eventid: string): Promise<any> {
     const originalLine = '- ' + eventid + ' ' + content;
     const newLine = fileLines[idString];
 
-    // Remove event from file - removing by line index via String.replace can miss
-    // (e.g. when the recorded index points at a blank line, replace("") is a
-    // no-op and the line stays in the file while the event disappears from
-    // the calendar). Remove the physical line at the index instead.
+    // Remove event from file
     const newFileContent = removeLineAt(fileContent, idString);
-    await vault.modify(dailyNote, newFileContent);
+    // Re-fetch the file object to ensure Obsidian recognizes the modification
+    const freshFile = vault.getAbstractFileByPath(dailyNote.path);
+    await vault.modify(freshFile instanceof TFile ? freshFile : dailyNote, newFileContent);
 
     // Send event to delete file
     const deleteDate = await sendEventToDelete(originalLine);
