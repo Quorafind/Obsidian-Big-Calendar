@@ -82,6 +82,7 @@ export default {
   Connected: 'Connected',
   'Clear Filters': 'Clear Filters',
   Filter: 'Filter',
+  'Toggle side panels': 'Toggle side panels',
 
   // Task Types
   'Task - Todo': 'Task - Todo',

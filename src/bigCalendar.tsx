@@ -76,6 +76,16 @@ export class BigCalendar extends ItemView {
       this.contentEl.toggleClass('filter-open', !this.contentEl.hasClass('filter-open'));
     });
 
+    // Collapse both side panels if either is open, otherwise expand both
+    this.addAction('columns-3', t('Toggle side panels'), () => {
+      const {leftSplit, rightSplit} = this.app.workspace;
+      const collapse = !leftSplit.collapsed || !rightSplit.collapsed;
+      for (const split of [leftSplit, rightSplit]) {
+        if (collapse) split.collapse();
+        else split.expand();
+      }
+    });
+
     this.root = ReactDOM.createRoot(this.contentEl);
     this.root.render(
       <React.StrictMode>
