@@ -76,16 +76,15 @@ const useCalendarStore = create<CalendarState>((set, get) => ({
   },
 
   setStartDay: (startDay) => {
-    // Only update if the value has changed
-    if (get().startDay !== startDay) {
-      set({startDay});
+    set({startDay});
 
-      // Update moment locale based on start day
-      if (startDay === 'sunday') {
-        moment.updateLocale('en', {week: {dow: 0}});
-      } else {
-        moment.updateLocale('en', {week: {dow: 1}});
-      }
+    // Compare against moment itself, not the stored value: the store starts as 'monday',
+    // so a 'monday' setting never differed from it and the locale was never updated
+    const dow = startDay === 'sunday' ? 0 : 1;
+    const localeData = moment.localeData();
+    if (localeData.firstDayOfWeek() !== dow) {
+      // Update the active locale (not 'en') so Obsidian's language isn't switched
+      moment.updateLocale(moment.locale(), {week: {dow, doy: localeData.firstDayOfYear()}});
     }
   },
 
