@@ -6,7 +6,7 @@ export interface LocationState extends AppLocation {
   setQueryFilter: (filter: string) => void;
   setTagQuery: (tag: string) => void;
   setDurationQuery: (duration: TDuration | null) => void;
-  setEventType: (eventType: EventSpecType | '') => void;
+  setEventTypes: (eventTypes: string[]) => void;
   setText: (text: string) => void;
   setHash: (hash: string) => void;
   // New filter methods
@@ -23,7 +23,7 @@ const useLocationStore = create<LocationState>((set, get) => ({
     tag: '',
     duration: null,
     text: '',
-    eventType: '',
+    eventTypes: [],
     filter: '',
     contentRegex: '',
     folderPaths: [],
@@ -87,15 +87,14 @@ const useLocationStore = create<LocationState>((set, get) => ({
     }
   },
 
-  setEventType: (eventType) => {
-    // Only update if type has changed
-    const currentEventType = get().query.eventType;
-    if (eventType !== currentEventType) {
+  setEventTypes: (eventTypes) => {
+    // Only update if types have changed
+    if (JSON.stringify(eventTypes) !== JSON.stringify(get().query.eventTypes)) {
       set((state) => ({
         ...state,
         query: {
           ...state.query,
-          eventType,
+          eventTypes,
         },
       }));
     }

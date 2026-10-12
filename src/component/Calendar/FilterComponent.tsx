@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {moment} from 'obsidian';
+import {Menu, moment} from 'obsidian';
 import locationService from '@/services/locationService';
 import globalService from '@/services/globalService';
 import {t} from '@/translations/helper';
@@ -10,10 +10,35 @@ interface FilterComponentProps {
   onFilterChange: (filterType: 'metadata' | 'client') => void;
 }
 
+// Event types offered in the toolbar menu, in display order
+const EVENT_TYPES: {value: string; label: Parameters<typeof t>[0]}[] = [
+  {value: 'default', label: 'Default'},
+  {value: 'TASK-TODO', label: 'Task - Todo'},
+  {value: 'TASK-DONE', label: 'Task - Done'},
+  {value: 'TASK-CANCELLED', label: 'Task - Cancelled'},
+  {value: 'TASK-FORWARDED', label: 'Task - Forwarded'},
+  {value: 'TASK-DEFERRED', label: 'Task - Deferred'},
+  {value: 'TASK-IN_PROGRESS', label: 'Task - In Progress'},
+  {value: 'TASK-QUESTION', label: 'Task - Question'},
+  {value: 'TASK-ADD', label: 'Task - Add'},
+  {value: 'TASK-REVIEWED', label: 'Task - Reviewed'},
+  {value: 'TASK-IMPORTANT', label: 'Task - Important'},
+  {value: 'TASK-INFO', label: 'Task - Info'},
+  {value: 'TASK-BOOKMARK', label: 'Task - Bookmark'},
+  {value: 'TASK-PRO', label: 'Task - Pro'},
+  {value: 'TASK-CON', label: 'Task - Con'},
+  {value: 'TASK-BRAINSTORMING', label: 'Task - Brainstorming'},
+  {value: 'TASK-EXAMPLE', label: 'Task - Example'},
+  {value: 'TASK-QUOTE', label: 'Task - Quote'},
+  {value: 'TASK-NOTE', label: 'Task - Note'},
+  {value: 'TASK-WIN', label: 'Task - Win'},
+  {value: 'TASK-LOSE', label: 'Task - Lose'},
+];
+
 const FilterComponent: React.FC<FilterComponentProps> = ({onFilterChange}) => {
   const [activeFilter, setActiveFilter] = useState<string>('');
   const [contentRegex, setContentRegex] = useState<string>('');
-  const [eventType, setEventType] = useState<string>('');
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [workspaceFilters, setWorkspaceFilters] = useState<WorkspaceFilter[]>([]);
   const [filtering, setFiltering] = useState<boolean>(false);
 
@@ -28,7 +53,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({onFilterChange}) => {
     const locationState = locationService.getState();
     setActiveFilter(locationState.query.filter || '');
     setContentRegex(locationState.query.contentRegex || '');
-    setEventType(locationState.query.eventType || '');
+    setEventTypes(locationState.query.eventTypes || []);
   }, []);
 
   // Handle filter selection - may require metadata reload
@@ -41,6 +66,8 @@ const FilterComponent: React.FC<FilterComponentProps> = ({onFilterChange}) => {
       filter && (filter.metadataKeys.length > 0 || Object.keys(filter.metadataValues).length > 0);
 
     locationService.setEventFilter(filterId);
+    // Show the workspace filter's types in the toolbar menu
+    setEventTypes(locationService.getState().query.eventTypes || []);
     onFilterChange(requiresMetadataReload ? 'metadata' : 'client');
     setFiltering(true);
   };
@@ -54,14 +81,40 @@ const FilterComponent: React.FC<FilterComponentProps> = ({onFilterChange}) => {
     setFiltering(true);
   };
 
-  // Handle event type change - client-side filtering only
-  const handleEventTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value as EventSpecType | '';
-    setEventType(value);
-    locationService.setEventTypeQuery(value);
+  // Handle event types change - client-side filtering only
+  const applyEventTypes = (types: string[]) => {
+    setEventTypes(types);
+    locationService.setEventTypesQuery(types);
     onFilterChange('client');
     setFiltering(true);
   };
+
+  // Menu with a checkmark per type; each click toggles one type
+  const openEventTypeMenu = (e: React.MouseEvent) => {
+    const menu = new Menu();
+    EVENT_TYPES.forEach(({value, label}) => {
+      menu.addItem((item) =>
+        item
+          .setTitle(t(label))
+          .setChecked(eventTypes.includes(value))
+          .onClick(() =>
+            applyEventTypes(
+              eventTypes.includes(value) ? eventTypes.filter((type) => type !== value) : [...eventTypes, value],
+            ),
+          ),
+      );
+    });
+    menu.addSeparator();
+    menu.addItem((item) => item.setTitle(t('All')).onClick(() => applyEventTypes([])));
+    menu.showAtMouseEvent(e.nativeEvent);
+  };
+
+  const eventTypesLabel =
+    eventTypes.length === 0
+      ? t('All')
+      : EVENT_TYPES.filter(({value}) => eventTypes.includes(value))
+          .map(({label}) => t(label).replace(/^.* - /, ''))
+          .join(', ');
 
   // Handle clear filters
   const handleClearFilters = () => {
@@ -72,7 +125,7 @@ const FilterComponent: React.FC<FilterComponentProps> = ({onFilterChange}) => {
 
     setActiveFilter('');
     setContentRegex('');
-    setEventType('');
+    setEventTypes([]);
     locationService.clearQuery();
 
     // Only reload data if we were using metadata filters
@@ -96,38 +149,9 @@ const FilterComponent: React.FC<FilterComponentProps> = ({onFilterChange}) => {
 
       <div className="filter-section">
         <ObsidianIcon iconName="calendar-fold" tooltip={t('Event Type')} />
-        <select
-          value={eventType ? [eventType] : []}
-          onChange={(e) => {
-            // Get the selected option value
-            const selectedValue = e.target.value as EventSpecType | '';
-            handleEventTypeChange({target: {value: selectedValue}} as React.ChangeEvent<HTMLSelectElement>);
-          }}
-          className="filter-select"
-        >
-          <option value="">{t('All')}</option>
-          <option value="default">{t('Default')}</option>
-          <option value="TASK-TODO">{t('Task - Todo')}</option>
-          <option value="TASK-DONE">{t('Task - Done')}</option>
-          <option value="TASK-CANCELLED">{t('Task - Cancelled')}</option>
-          <option value="TASK-FORWARDED">{t('Task - Forwarded')}</option>
-          <option value="TASK-DEFERRED">{t('Task - Deferred')}</option>
-          <option value="TASK-IN_PROGRESS">{t('Task - In Progress')}</option>
-          <option value="TASK-QUESTION">{t('Task - Question')}</option>
-          <option value="TASK-ADD">{t('Task - Add')}</option>
-          <option value="TASK-REVIEWED">{t('Task - Reviewed')}</option>
-          <option value="TASK-IMPORTANT">{t('Task - Important')}</option>
-          <option value="TASK-INFO">{t('Task - Info')}</option>
-          <option value="TASK-BOOKMARK">{t('Task - Bookmark')}</option>
-          <option value="TASK-PRO">{t('Task - Pro')}</option>
-          <option value="TASK-CON">{t('Task - Con')}</option>
-          <option value="TASK-BRAINSTORMING">{t('Task - Brainstorming')}</option>
-          <option value="TASK-EXAMPLE">{t('Task - Example')}</option>
-          <option value="TASK-QUOTE">{t('Task - Quote')}</option>
-          <option value="TASK-NOTE">{t('Task - Note')}</option>
-          <option value="TASK-WIN">{t('Task - Win')}</option>
-          <option value="TASK-LOSE">{t('Task - Lose')}</option>
-        </select>
+        <button className="filter-select" onClick={openEventTypeMenu}>
+          {eventTypesLabel}
+        </button>
       </div>
 
       <div className="filter-section">

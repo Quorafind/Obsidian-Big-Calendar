@@ -88,8 +88,8 @@ class EventService {
       console.log('filterCriteria', filterCriteria);
 
       // Filter by event type if specified
-      if (filterCriteria.eventType) {
-        filteredEvents = filteredEvents.filter((event) => event.eventType === filterCriteria.eventType);
+      if (filterCriteria.eventTypes && filterCriteria.eventTypes.length > 0) {
+        filteredEvents = filteredEvents.filter((event) => filterCriteria.eventTypes.includes(event.eventType));
       }
 
       // Filter by content text if specified

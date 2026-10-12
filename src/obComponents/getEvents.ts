@@ -154,7 +154,7 @@ async function fileHasMatchingMetadata(
 // Check if the event matches the filter criteria
 export function eventMatchesFilter(event: Model.Event, filter: Query): boolean {
   // Filter by event type
-  if (filter.eventType && event.eventType !== filter.eventType) {
+  if (filter.eventTypes?.length > 0 && !filter.eventTypes.includes(event.eventType)) {
     return false;
   }
 

@@ -22,7 +22,7 @@ declare namespace Model {
   }
 
   interface EventFilter {
-    eventType?: string;
+    eventTypes?: string[];
     contentText?: string;
     contentRegex?: string;
     folderPaths?: string[];

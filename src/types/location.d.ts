@@ -6,7 +6,8 @@ interface TDuration {
 interface Query {
   tag: string;
   duration: TDuration | null;
-  eventType: EventSpecType | '';
+  // Empty means all types
+  eventTypes: string[];
   text: string;
   filter: string;
   contentRegex?: string;

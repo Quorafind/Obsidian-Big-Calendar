@@ -37,6 +37,14 @@ interface CalendarProps {
   onEventSelect: (event: EventCreateResult, slotInfo: SlotInfo) => void;
 }
 
+// Turn the current location query into event filter criteria
+const toFilterCriteria = (query: Query): Model.EventFilter => ({
+  eventTypes: query.eventTypes?.length > 0 ? query.eventTypes : undefined,
+  contentRegex: query.contentRegex || undefined,
+  folderPaths: query.folderPaths?.length > 0 ? query.folderPaths : undefined,
+  contentText: query.text || '',
+});
+
 // Create a memoized DragAndDropCalendar component
 const DragAndDropCalendar = memo(withDragAndDrop(Calendar as any));
 
@@ -94,13 +102,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
           // Apply current filters after loading events
           const query = locationService.getState().query;
           if (query) {
-            const filterCriteria: Model.EventFilter = {
-              eventType: query.eventType || undefined,
-              contentRegex: query.contentRegex || undefined,
-              folderPaths: query.folderPaths?.length > 0 ? query.folderPaths : undefined,
-              // Add any other filter criteria from query
-              contentText: query.text || '',
-            };
+            const filterCriteria = toFilterCriteria(query);
 
             // Apply filtering
             eventService.filterEvents(filterCriteria);
@@ -183,12 +185,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
 
           // After fetching all events, apply filters
           const query = locationService.getState().query;
-          const filterCriteria: Model.EventFilter = {
-            eventType: query.eventType || undefined,
-            contentRegex: query.contentRegex || undefined,
-            folderPaths: query.folderPaths?.length > 0 ? query.folderPaths : undefined,
-            contentText: query.text || '',
-          };
+          const filterCriteria = toFilterCriteria(query);
 
           // Apply filtering
           eventService.filterEvents(filterCriteria);
@@ -200,12 +197,7 @@ const CalendarComponent = forwardRef((props: CalendarProps, ref: React.Forwarded
       } else {
         // For client-side filtering, just apply filters to existing events
         const query = locationService.getState().query;
-        const filterCriteria: Model.EventFilter = {
-          eventType: query.eventType || undefined,
-          contentRegex: query.contentRegex || undefined,
-          folderPaths: query.folderPaths?.length > 0 ? query.folderPaths : undefined,
-          contentText: query.text || '',
-        };
+        const filterCriteria = toFilterCriteria(query);
 
         // Apply filtering
         eventService.filterEvents(filterCriteria);

@@ -14,7 +14,7 @@ class LocationService {
       tag: '',
       duration: null,
       text: '',
-      eventType: '',
+      eventTypes: [],
       filter: '',
       contentRegex: '',
       folderPaths: [],
@@ -31,8 +31,8 @@ class LocationService {
     useLocationStore.getState().setHash(hash);
   };
 
-  public setEventTypeQuery = (eventType: EventSpecType | '' = '') => {
-    useLocationStore.getState().setEventType(eventType);
+  public setEventTypesQuery = (eventTypes: string[] = []) => {
+    useLocationStore.getState().setEventTypes(eventTypes);
   };
 
   public setEventFilter = (filterId: string) => {
@@ -83,13 +83,8 @@ class LocationService {
     // Apply the filter settings to the query
     const locationStore = useLocationStore.getState();
 
-    // Apply event type filter
-    if (filter.eventTypes.length > 0) {
-      locationStore.setEventType((filter.eventTypes[0] as EventSpecType) || '');
-    } else {
-      // Clear event type if none in the filter
-      locationStore.setEventType('');
-    }
+    // Apply event type filter (all of the filter's types; none means all)
+    locationStore.setEventTypes(filter.eventTypes || []);
 
     // Set content regex
     locationStore.setContentRegex(filter.contentRegex || '');
