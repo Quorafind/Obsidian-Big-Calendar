@@ -15,6 +15,7 @@ import {hideEvent} from '@/obComponents/hideEvent';
 class EventService {
   public initialized = false;
   private fileEventMap: Map<string, Model.Event[]> = new Map(); // Map to store events by file path
+  private lastFilter?: Model.EventFilter; // Re-applied after per-file updates
 
   /**
    * Get the current state of the event store
@@ -72,6 +73,7 @@ class EventService {
    * @returns Array of filtered events
    */
   public filterEvents(filterCriteria?: Model.EventFilter) {
+    this.lastFilter = filterCriteria;
     try {
       // Get all events from the store
       const allEvents = useEventStore.getState().allEvents;
@@ -335,8 +337,8 @@ class EventService {
       return;
     }
 
-    // Get all events from the store
-    const currentEvents = [...this.getState().events];
+    // Get all events from the store (unfiltered, so events hidden by the filter are kept)
+    const currentEvents = [...this.getState().allEvents];
 
     // Get events to remove (from the file)
     const eventsToRemove = this.fileEventMap.get(filePath) || [];
@@ -344,8 +346,9 @@ class EventService {
     // Filter out events from the specific file
     const remainingEvents = currentEvents.filter((event) => !eventsToRemove.some((e) => e.id === event.id));
 
-    // Update the store with remaining events
+    // Update the store with remaining events and re-apply the active filter
     useEventStore.getState().setEvents(remainingEvents);
+    this.filterEvents(this.lastFilter);
 
     // Remove file entry from the map
     this.fileEventMap.delete(filePath);
@@ -395,14 +398,15 @@ class EventService {
       // Update the file-event map
       this.fileEventMap.set(file.path, updatedFileEvents);
 
-      // Get all current events that are NOT from this file path
-      const currentEvents = this.getState().events.filter((event) => event.path !== file.path);
+      // Get all current events that are NOT from this file path (unfiltered, so events hidden by the filter are kept)
+      const currentEvents = this.getState().allEvents.filter((event) => event.path !== file.path);
 
       // Combine with updated events from this file
       const updatedEvents = [...currentEvents, ...updatedFileEvents];
 
-      // Update the store
+      // Update the store and re-apply the active filter
       useEventStore.getState().setEvents(updatedEvents);
+      this.filterEvents(this.lastFilter);
 
       if (!this.initialized) {
         this.initialized = true;

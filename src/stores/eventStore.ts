@@ -30,8 +30,8 @@ const useEventStore = create<EventState>((set, get) => ({
 
   // Actions
   setEvents: (events) => {
-    // First check if the events array actually changed
-    const currentEvents = get().events;
+    // First check if the events array actually changed (against allEvents: events may be a filtered subset)
+    const currentEvents = get().allEvents;
 
     // Process and sort events
     const processedEvents = utils.dedupeObjectWithId(
